@@ -165,10 +165,36 @@ namespace OpenNinja.EditorSetup
                 anchored: Vector2.zero, size: Vector2.zero,
                 color: new Color(1f, 0.85f, 0.2f, 1f), alignment: TextAlignmentOptions.Center);
 
+            // Combo timer bar (drains as the window expires).
+            var timerBg = new GameObject("TimerBg", typeof(RectTransform), typeof(Image));
+            timerBg.transform.SetParent(badgeVisual.transform, false);
+            var tbRT = (RectTransform)timerBg.transform;
+            tbRT.anchorMin = new Vector2(0.1f, 0f);
+            tbRT.anchorMax = new Vector2(0.9f, 0f);
+            tbRT.pivot = new Vector2(0.5f, 0f);
+            tbRT.anchoredPosition = new Vector2(0, -4);
+            tbRT.sizeDelta = new Vector2(0, 8);
+            timerBg.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.15f);
+
+            var timerFillGO = new GameObject("TimerFill", typeof(RectTransform), typeof(Image));
+            timerFillGO.transform.SetParent(timerBg.transform, false);
+            var tfRT = (RectTransform)timerFillGO.transform;
+            tfRT.anchorMin = Vector2.zero;
+            tfRT.anchorMax = Vector2.one;
+            tfRT.offsetMin = Vector2.zero;
+            tfRT.offsetMax = Vector2.zero;
+            var timerFillImage = timerFillGO.GetComponent<Image>();
+            timerFillImage.color = new Color(1f, 0.85f, 0.2f, 1f);
+            timerFillImage.type = Image.Type.Filled;
+            timerFillImage.fillMethod = Image.FillMethod.Horizontal;
+            timerFillImage.fillOrigin = (int)Image.OriginHorizontal.Left;
+            timerFillImage.fillAmount = 1f;
+
             var badgeView = comboBadge.AddComponent<ComboBadgeView>();
             var badgeSO = new SerializedObject(badgeView);
             SetRef(badgeSO, "label", badgeLabel.GetComponent<TMP_Text>());
             SetRef(badgeSO, "root", badgeVisual);
+            SetRef(badgeSO, "timerFill", timerFillImage);
             badgeSO.ApplyModifiedPropertiesWithoutUndo();
             badgeVisual.SetActive(false);
 
@@ -189,15 +215,20 @@ namespace OpenNinja.EditorSetup
             hlg.childControlWidth = false;
             hlg.childControlHeight = false;
 
-            var hearts = new Image[3];
+            var hearts = new Graphic[3];
             for (int i = 0; i < 3; i++)
             {
-                var heartGO = new GameObject($"Heart_{i + 1}", typeof(RectTransform), typeof(Image));
+                var heartGO = new GameObject($"Heart_{i + 1}", typeof(RectTransform));
                 heartGO.transform.SetParent(livesRow.transform, false);
                 var heartRT = (RectTransform)heartGO.transform;
                 heartRT.sizeDelta = new Vector2(72, 72);
-                hearts[i] = heartGO.GetComponent<Image>();
-                hearts[i].color = Color.white;
+                var tmp = heartGO.AddComponent<TextMeshProUGUI>();
+                tmp.text = "♥"; // ♥
+                tmp.fontSize = 72f;
+                tmp.alignment = TextAlignmentOptions.Center;
+                tmp.color = new Color(1f, 0.25f, 0.3f, 1f);
+                tmp.enableWordWrapping = false;
+                hearts[i] = tmp;
             }
             var livesView = livesRow.AddComponent<LivesView>();
             var livesSO = new SerializedObject(livesView);

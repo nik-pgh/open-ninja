@@ -20,7 +20,7 @@ namespace OpenNinja
 
         [Header("Difficulty")]
         [SerializeField] private AnimationCurve spawnIntervalOverTime =
-            AnimationCurve.Linear(0f, 1.2f, 60f, 0.4f);
+            AnimationCurve.Linear(0f, 0.7f, 60f, 0.3f);
         [SerializeField] private AnimationCurve dangerProbabilityOverTime =
             AnimationCurve.Linear(0f, 0.05f, 60f, 0.15f);
         [SerializeField, Range(0f, 1f)] private float redWeightOfNonDanger = 0.25f;

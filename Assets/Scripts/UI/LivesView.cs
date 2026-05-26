@@ -4,14 +4,15 @@ using UnityEngine.UI;
 namespace OpenNinja
 {
     /// <summary>
-    /// Lights the first N heart images based on current lives. Hearts are assigned
-    /// in the Inspector in order (left-to-right).
+    /// Lights the first N heart graphics based on current lives. Hearts are assigned
+    /// in the Inspector in order (left-to-right). Accepts any Graphic (Image or
+    /// TMP_Text) so callers can use sprite hearts or unicode hearts interchangeably.
     /// </summary>
     public class LivesView : MonoBehaviour
     {
-        [SerializeField] private Image[] hearts;
-        [SerializeField] private Color aliveColor = Color.white;
-        [SerializeField] private Color lostColor = new Color(1f, 1f, 1f, 0.2f);
+        [SerializeField] private Graphic[] hearts;
+        [SerializeField] private Color aliveColor = new Color(1f, 0.25f, 0.3f, 1f);
+        [SerializeField] private Color lostColor = new Color(0.4f, 0.4f, 0.4f, 0.5f);
 
         private void OnEnable()
         {

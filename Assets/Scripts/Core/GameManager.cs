@@ -14,7 +14,7 @@ namespace OpenNinja
         public static GameManager Instance { get; private set; }
 
         [Header("Tuning")]
-        [SerializeField] private float comboWindowSeconds = 0.5f;
+        [SerializeField] private float comboWindowSeconds = 1.0f;
         [SerializeField] private int startingLives = 3;
         [SerializeField] private int maxComboMultiplier = 8;
 
@@ -22,6 +22,12 @@ namespace OpenNinja
         public int ComboMultiplier { get; private set; } = 1;
         public int Lives { get; private set; }
         public bool IsGameOver { get; private set; }
+
+        /// <summary>Seconds left on the active combo window. Hits 0 when the window expires.</summary>
+        public float ComboTimeRemaining => Mathf.Max(0f, _comboTimer);
+
+        /// <summary>Full combo window length. UIs use this to compute a normalized [0,1] fill.</summary>
+        public float ComboWindowSeconds => comboWindowSeconds;
 
         private float _comboTimer;
 
