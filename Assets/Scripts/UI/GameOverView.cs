@@ -40,7 +40,7 @@ namespace OpenNinja
             GameManager.Instance?.ResetGame();
             spawner?.NotifyRunRestarted();
             // Also destroy any cubes left in the scene (e.g. frozen mid-flight).
-            foreach (var cube in FindObjectsByType<Cube>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            foreach (var cube in FindObjectsByType<Cube>(FindObjectsInactive.Exclude))
             {
                 Destroy(cube.gameObject);
             }
