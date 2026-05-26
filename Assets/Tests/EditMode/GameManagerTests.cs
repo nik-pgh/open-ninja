@@ -21,6 +21,7 @@ namespace OpenNinja.Tests
         public void TearDown()
         {
             Object.DestroyImmediate(_go);
+            Time.timeScale = 1f;
         }
 
         [Test]
@@ -81,12 +82,17 @@ namespace OpenNinja.Tests
         }
 
         [Test]
-        public void RegisterDangerClick_DeductsLifeAndResetsCombo()
+        public void RegisterDangerClick_DeductsLifeAndResetsComboAndFiresEvents()
         {
+            int livesEventValue = -1;
+            _gm.OnLivesChanged += v => livesEventValue = v;
+
             _gm.RegisterHit(CubeType.Green, Vector3.zero);   // combo now 2
             _gm.RegisterDangerClick(Vector3.zero);
+
             Assert.AreEqual(2, _gm.Lives);
             Assert.AreEqual(1, _gm.ComboMultiplier);
+            Assert.AreEqual(2, livesEventValue, "OnLivesChanged must fire with the new value");
         }
 
         [Test]
@@ -136,6 +142,19 @@ namespace OpenNinja.Tests
             _gm.RegisterHit(CubeType.Red, Vector3.zero);
             Assert.AreEqual(4, reportedPoints); // 2 base × 2 mult
             Assert.AreEqual(2, reportedMult);
+        }
+
+        [Test]
+        public void RegisterHit_AfterGameOver_IsNoOp()
+        {
+            _gm.RegisterMiss();
+            _gm.RegisterMiss();
+            _gm.RegisterMiss();
+            Assert.IsTrue(_gm.IsGameOver, "Sanity: game over after 3 misses");
+
+            int scoreBefore = _gm.Score;
+            _gm.RegisterHit(CubeType.Green, Vector3.zero);
+            Assert.AreEqual(scoreBefore, _gm.Score, "Score must not change after game over");
         }
     }
 }

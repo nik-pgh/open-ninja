@@ -74,8 +74,8 @@ namespace OpenNinja
         public void RegisterDangerClick(Vector3 worldPos)
         {
             if (IsGameOver) return;
-            OnHit?.Invoke(-1, 1, worldPos);
             ApplyPenalty();
+            OnHit?.Invoke(-1, 1, worldPos);
         }
 
         public void RegisterMiss()
