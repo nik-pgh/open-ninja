@@ -23,7 +23,7 @@ namespace OpenNinja
 
         private bool _isSwiping;
         private Vector3 _lastTipWorld;
-        private readonly HashSet<int> _slicedThisSwipe = new();
+        private readonly HashSet<Cube> _slicedThisSwipe = new();
 
         private void Awake()
         {
@@ -94,8 +94,7 @@ namespace OpenNinja
             {
                 var cube = hit.collider.GetComponent<Cube>() ?? hit.collider.GetComponentInParent<Cube>();
                 if (cube == null) continue;
-                int id = cube.GetInstanceID();
-                if (!_slicedThisSwipe.Add(id)) continue;
+                if (!_slicedThisSwipe.Add(cube)) continue;
                 cube.HandleSlice(hit.point);
             }
         }
