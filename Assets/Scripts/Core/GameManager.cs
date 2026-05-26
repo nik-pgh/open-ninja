@@ -6,7 +6,9 @@ namespace OpenNinja
     /// <summary>
     /// Single source of truth for run-time game state. Other components either call
     /// the Register* mutators or subscribe to the events; nobody else writes state.
+    /// Runs early so UI listeners see Instance != null in their OnEnable.
     /// </summary>
+    [DefaultExecutionOrder(-100)]
     public class GameManager : MonoBehaviour
     {
         public static GameManager Instance { get; private set; }

@@ -141,7 +141,8 @@ namespace OpenNinja.EditorSetup
             SetRef(scoreSO, "label", scoreGO.GetComponent<TMP_Text>());
             scoreSO.ApplyModifiedPropertiesWithoutUndo();
 
-            // ComboBadge (top-center; root holds the script, child label holds the text).
+            // ComboBadge wrapper (always active, holds the script).
+            // Visual child is what gets toggled when the multiplier is 1.
             var comboBadge = new GameObject("ComboBadge", typeof(RectTransform));
             comboBadge.transform.SetParent(canvasGO.transform, false);
             var cbRT = (RectTransform)comboBadge.transform;
@@ -150,15 +151,26 @@ namespace OpenNinja.EditorSetup
             cbRT.pivot = new Vector2(0.5f, 1f);
             cbRT.anchoredPosition = new Vector2(0, -40);
             cbRT.sizeDelta = new Vector2(400, 80);
-            var badgeLabel = NewTMP(comboBadge.transform, "Label", "Combo x2", 48,
+
+            var badgeVisual = new GameObject("Visual", typeof(RectTransform));
+            badgeVisual.transform.SetParent(comboBadge.transform, false);
+            var bvRT = (RectTransform)badgeVisual.transform;
+            bvRT.anchorMin = Vector2.zero;
+            bvRT.anchorMax = Vector2.one;
+            bvRT.offsetMin = Vector2.zero;
+            bvRT.offsetMax = Vector2.zero;
+
+            var badgeLabel = NewTMP(badgeVisual.transform, "Label", "Combo x2", 48,
                 anchorMin: Vector2.zero, anchorMax: Vector2.one, pivot: new Vector2(0.5f, 0.5f),
                 anchored: Vector2.zero, size: Vector2.zero,
                 color: new Color(1f, 0.85f, 0.2f, 1f), alignment: TextAlignmentOptions.Center);
+
             var badgeView = comboBadge.AddComponent<ComboBadgeView>();
             var badgeSO = new SerializedObject(badgeView);
             SetRef(badgeSO, "label", badgeLabel.GetComponent<TMP_Text>());
-            SetRef(badgeSO, "root", comboBadge);
+            SetRef(badgeSO, "root", badgeVisual);
             badgeSO.ApplyModifiedPropertiesWithoutUndo();
+            badgeVisual.SetActive(false);
 
             // LivesRow (top-right, 3 heart images).
             var livesRow = new GameObject("LivesRow", typeof(RectTransform), typeof(HorizontalLayoutGroup));
@@ -213,9 +225,18 @@ namespace OpenNinja.EditorSetup
             SetRef(psSO, "gameCamera", cam);
             psSO.ApplyModifiedPropertiesWithoutUndo();
 
-            // GameOverPanel: dimmed background + final score + restart button.
-            var panel = new GameObject("GameOverPanel", typeof(RectTransform), typeof(Image));
-            panel.transform.SetParent(canvasGO.transform, false);
+            // GameOver wrapper (always active, holds the script).
+            // The dim Panel child is what Awake hides and OnGameOver shows.
+            var gameOverHost = new GameObject("GameOver", typeof(RectTransform));
+            gameOverHost.transform.SetParent(canvasGO.transform, false);
+            var gohRT = (RectTransform)gameOverHost.transform;
+            gohRT.anchorMin = Vector2.zero;
+            gohRT.anchorMax = Vector2.one;
+            gohRT.offsetMin = Vector2.zero;
+            gohRT.offsetMax = Vector2.zero;
+
+            var panel = new GameObject("Panel", typeof(RectTransform), typeof(Image));
+            panel.transform.SetParent(gameOverHost.transform, false);
             var pnlRT = (RectTransform)panel.transform;
             pnlRT.anchorMin = Vector2.zero;
             pnlRT.anchorMax = Vector2.one;
@@ -244,13 +265,14 @@ namespace OpenNinja.EditorSetup
                 anchored: Vector2.zero, size: Vector2.zero,
                 color: Color.white, alignment: TextAlignmentOptions.Center);
 
-            var goView = panel.AddComponent<GameOverView>();
+            var goView = gameOverHost.AddComponent<GameOverView>();
             var goSO = new SerializedObject(goView);
             SetRef(goSO, "panelRoot", panel);
             SetRef(goSO, "finalScoreLabel", finalScore.GetComponent<TMP_Text>());
             SetRef(goSO, "restartButton", btnGO.GetComponent<Button>());
             SetRef(goSO, "spawner", spawner);
             goSO.ApplyModifiedPropertiesWithoutUndo();
+            panel.SetActive(false);
 
             // ---- Save scene + add to build settings ----
             const string scenePath = "Assets/Scenes/SampleScene.unity";
