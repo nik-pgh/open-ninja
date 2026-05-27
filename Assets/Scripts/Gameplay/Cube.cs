@@ -35,7 +35,7 @@ namespace OpenNinja
             if (gm == null) return; // not in a real scene (e.g. unit test) — fine
 
             if (type == CubeType.Black) gm.RegisterDangerClick(slicePoint);
-            else                       gm.RegisterHit(type, slicePoint);
+            else                       gm.RegisterHit(type == CubeType.Red ? 2 : 1, slicePoint);
 
             if (Application.isPlaying) Destroy(gameObject);
         }
