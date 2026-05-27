@@ -388,8 +388,10 @@ namespace OpenNinja.EditorSetup
             Object.DestroyImmediate(visualGO.GetComponent<Collider>()); // collider is on segments
             visualGO.transform.SetParent(wall.transform, false);
             visualGO.transform.localScale = fullSize;
+            // Walls are physics-only. Hide the visual; the player should see cubes
+            // bounce against an invisible boundary, not a tilted slab at the edge of view.
             var mr = visualGO.GetComponent<MeshRenderer>();
-            if (mr != null) mr.enabled = true;
+            if (mr != null) mr.enabled = false;
 
             // Segment colliders.
             bool isHorizontal = fullSize.x > fullSize.y;
