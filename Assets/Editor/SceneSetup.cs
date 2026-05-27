@@ -108,11 +108,11 @@ namespace OpenNinja.EditorSetup
 
             var spawnLeft = new GameObject("SpawnLeft");
             spawnLeft.transform.SetParent(spawnerGO.transform, false);
-            spawnLeft.transform.position = new Vector3(-3.5f, -8f, 0f);
+            spawnLeft.transform.position = new Vector3(-3.5f, -6f, 0f);
 
             var spawnRight = new GameObject("SpawnRight");
             spawnRight.transform.SetParent(spawnerGO.transform, false);
-            spawnRight.transform.position = new Vector3(3.5f, -8f, 0f);
+            spawnRight.transform.position = new Vector3(3.5f, -6f, 0f);
 
             var cubePrefab = AssetDatabase.LoadAssetAtPath<Cube>("Assets/Prefabs/Cube.prefab");
 
@@ -121,16 +121,19 @@ namespace OpenNinja.EditorSetup
             SetRef(spawnerSO, "spawnLineLeft", spawnLeft.transform);
             SetRef(spawnerSO, "spawnLineRight", spawnRight.transform);
 
-            // Build the MaterialEntry list. Curves shift the mix over time.
-            // Early game: lots of Wood/Stone; later game: more Metal/Crystal/Spiked/Rubber.
+            // MaterialEntry weight curves over elapsed run-time.
+            // Previously Wood (4) and Stone (3) dominated at t=0 with the other
+            // four materials at 0.25–0.5 each, so ~80% of early spawns were
+            // Wood/Stone and players rarely saw the other materials. Rebalanced
+            // so all six show up within the first handful of spawns.
             var entriesProp = spawnerSO.FindProperty("entries");
             entriesProp.arraySize = 6;
-            WireEntry(entriesProp, 0, "Wood",    AnimationCurve.Linear(0, 4f, 60, 2f));
-            WireEntry(entriesProp, 1, "Stone",   AnimationCurve.Linear(0, 3f, 60, 3f));
-            WireEntry(entriesProp, 2, "Metal",   AnimationCurve.Linear(0, 0.5f, 60, 1.5f));
-            WireEntry(entriesProp, 3, "Crystal", AnimationCurve.Linear(0, 0.25f, 60, 1f));
-            WireEntry(entriesProp, 4, "Spiked",  AnimationCurve.Linear(0, 0.5f, 60, 1.5f));
-            WireEntry(entriesProp, 5, "Rubber",  AnimationCurve.Linear(0, 0.5f, 60, 1f));
+            WireEntry(entriesProp, 0, "Wood",    AnimationCurve.Linear(0, 2f,   60, 1f));
+            WireEntry(entriesProp, 1, "Stone",   AnimationCurve.Linear(0, 2f,   60, 1.5f));
+            WireEntry(entriesProp, 2, "Metal",   AnimationCurve.Linear(0, 1.2f, 60, 2f));
+            WireEntry(entriesProp, 3, "Crystal", AnimationCurve.Linear(0, 0.8f, 60, 1.5f));
+            WireEntry(entriesProp, 4, "Spiked",  AnimationCurve.Linear(0, 1f,   60, 2f));
+            WireEntry(entriesProp, 5, "Rubber",  AnimationCurve.Linear(0, 1f,   60, 1.5f));
             spawnerSO.ApplyModifiedPropertiesWithoutUndo();
             log.Add("spawner wired");
 
