@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 40278d332c0bf44bc89ced26c1c6da45, type: 3}
+  m_Name: Crystal
+  m_EditorClassIdentifier: OpenNinja::OpenNinja.CubeMaterial
+  displayName: Crystal
+  role: 1
+  basePoints: 5
+  mass: 0.3
+  displayScale: 0.9
+  bouncinessMultiplier: 1
+  launchImpulseOverride: {x: 0, y: 0}
+  renderMaterial: {fileID: 2100000, guid: 1f53a79396acf4d70bd15a78e8c940ce, type: 2}
+  burstTint: {r: 0.7, g: 0.95, b: 1, a: 1}
+  impactClip: {fileID: 0}
+  audioPitchAtMassOne: 1
+  audioVolume: 0.7
