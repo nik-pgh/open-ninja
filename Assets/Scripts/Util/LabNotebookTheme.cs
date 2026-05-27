@@ -20,6 +20,13 @@ namespace OpenNinja
         public static readonly Color SubduedInk  = new Color(0.333f, 0.333f, 0.333f, 1f); // #555
         public static readonly Color GameOverDim = new Color(0f, 0f, 0f, 0.55f);
 
+        // ---- Lab-room backdrop (gameplay scene) ----
+        public static readonly Color WhiteboardWall = new Color(0.929f, 0.929f, 0.929f, 1f); // #ededed
+        public static readonly Color RubberFloor    = new Color(0.855f, 0.855f, 0.855f, 1f); // #dadada — softer step
+        public static readonly Color MarkerBlue     = new Color(0.102f, 0.298f, 0.722f, 0.55f); // faded blue marker
+        public static readonly Color MarkerRed      = new Color(0.737f, 0.157f, 0.157f, 0.55f); // faded red marker
+        public static readonly Color MarkerBlack    = new Color(0.176f, 0.176f, 0.176f, 0.40f); // pencil sketch
+
         // ---- Typography (font sizes in canvas units; portrait ref 1080x1920) ----
         public const float TitleSize        = 144f;
         public const float SubtitleSize     = 36f;

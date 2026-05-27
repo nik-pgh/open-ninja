@@ -28,9 +28,12 @@ namespace OpenNinja.EditorSetup
             scene.name = "MainScene";
 
             // ---- Skybox & ambient ----
-            var skyMat = CreateProceduralSky();
+            // Flat pale-grey skybox: this becomes the "ceiling/walls" the
+            // back-wall and floor quads sit against, so it never reads as sky.
+            var skyMat = CreateWhiteboardSky();
             RenderSettings.skybox = skyMat;
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Skybox;
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+            RenderSettings.ambientLight = new Color(0.85f, 0.85f, 0.85f, 1f);
             DynamicGI.UpdateEnvironment();
             log.Add("skybox + ambient set");
 
@@ -42,21 +45,27 @@ namespace OpenNinja.EditorSetup
             cam.transform.position = new Vector3(0f, 2f, -12f);
             cam.transform.rotation = Quaternion.Euler(10f, 0f, 0f);
             cam.fieldOfView = 75f;
-            cam.clearFlags = CameraClearFlags.Skybox;
-            cam.backgroundColor = new Color(0.06f, 0.06f, 0.12f, 1f);
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = LabNotebookTheme.WhiteboardWall;
             log.Add("camera positioned");
 
             // ---- Tune the directional light ----
+            // Neutral white "fluorescent" lab light, low shadow contrast to keep
+            // the whiteboard reading evenly across the playfield.
             var dirLight = Object.FindAnyObjectByType<Light>();
             if (dirLight != null && dirLight.type == LightType.Directional)
             {
-                dirLight.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
-                dirLight.color = new Color(1.0f, 0.95f, 0.85f);
-                dirLight.intensity = 1.0f;
+                dirLight.transform.rotation = Quaternion.Euler(60f, -20f, 0f);
+                dirLight.color = new Color(1.0f, 1.0f, 1.0f);
+                dirLight.intensity = 0.85f;
                 dirLight.shadows = LightShadows.Soft;
-                dirLight.shadowStrength = 0.6f;
+                dirLight.shadowStrength = 0.35f;
                 log.Add("directional light tuned");
             }
+
+            // ---- Lab-room backdrop ----
+            BuildWhiteboardBackdrop();
+            log.Add("whiteboard backdrop built");
 
             // ---- KillZone ----
             var killZone = new GameObject("KillZone");
@@ -708,22 +717,100 @@ namespace OpenNinja.EditorSetup
             if (tmp != null && LoadCaveat() != null) tmp.font = LoadCaveat();
         }
 
-        private static Material CreateProceduralSky()
+        private static Material CreateWhiteboardSky()
         {
-            const string path = "Assets/Materials/ProceduralSky.mat";
+            const string path = "Assets/Materials/WhiteboardSky.mat";
             var sky = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (sky == null)
             {
                 sky = new Material(Shader.Find("Skybox/Procedural"));
                 AssetDatabase.CreateAsset(sky, path);
             }
-            sky.SetFloat("_SunDisk", 2);                                       // small sun disk
-            sky.SetFloat("_AtmosphereThickness", 0.9f);                        // slight haze
-            sky.SetColor("_SkyTint", new Color(0.5f, 0.7f, 0.95f, 1f));
-            sky.SetColor("_GroundColor", new Color(0.2f, 0.18f, 0.16f, 1f));
+            // Pale, flat skybox — both tints near-white so the procedural
+            // gradient disappears. The back wall + floor quads provide all
+            // visible surface.
+            sky.SetFloat("_SunDisk", 0);                                       // no sun
+            sky.SetFloat("_AtmosphereThickness", 0.3f);
+            sky.SetColor("_SkyTint", LabNotebookTheme.WhiteboardWall);
+            sky.SetColor("_GroundColor", LabNotebookTheme.WhiteboardWall);
             sky.SetFloat("_Exposure", 1.0f);
             EditorUtility.SetDirty(sky);
             return sky;
+        }
+
+        // ---- Whiteboard backdrop (gameplay scene) ----
+
+        private static void BuildWhiteboardBackdrop()
+        {
+            var root = new GameObject("Backdrop");
+            root.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+
+            // Back wall: a 40×30 quad far enough behind the playfield (z=10) to
+            // fill the camera's FOV and act as a flat whiteboard surface.
+            var wall = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            wall.name = "Whiteboard";
+            wall.transform.SetParent(root.transform, false);
+            wall.transform.position = new Vector3(0f, 2f, 10f);
+            wall.transform.localScale = new Vector3(40f, 30f, 1f);
+            Object.DestroyImmediate(wall.GetComponent<Collider>());
+            wall.GetComponent<MeshRenderer>().sharedMaterial =
+                CreateUnlitColorMaterial("WhiteboardWall", LabNotebookTheme.WhiteboardWall);
+
+            // Rubber floor: a 40×20 horizontal quad below the killzone (y=-10),
+            // tilted 90° so it lies flat. Slightly darker grey than the wall.
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            floor.name = "RubberFloor";
+            floor.transform.SetParent(root.transform, false);
+            floor.transform.position = new Vector3(0f, -10f, 5f);
+            floor.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+            floor.transform.localScale = new Vector3(40f, 20f, 1f);
+            Object.DestroyImmediate(floor.GetComponent<Collider>());
+            floor.GetComponent<MeshRenderer>().sharedMaterial =
+                CreateUnlitColorMaterial("RubberFloor", LabNotebookTheme.RubberFloor);
+
+            // Chemistry formula decals — scattered Caveat handwriting in red/blue
+            // marker, positioned just in front of the whiteboard. Font sizes are
+            // chosen to read at the 1080x1920 portrait viewport (~5 world units
+            // tall = roughly thumbnail-readable at gameplay distance).
+            BuildFormulaDecal(root.transform, "H2O",      new Vector3(-10f,   9f, 9.95f), 5.0f, LabNotebookTheme.MarkerBlue, -6f);
+            BuildFormulaDecal(root.transform, "C6H12O6",  new Vector3(  6f,  8f, 9.95f), 4.4f, LabNotebookTheme.MarkerBlue, +4f);
+            BuildFormulaDecal(root.transform, "NaCl",     new Vector3(-11f,  3f, 9.95f), 4.8f, LabNotebookTheme.MarkerRed,  +8f);
+            BuildFormulaDecal(root.transform, "pH 7",     new Vector3(  9f,  3.5f, 9.95f), 4.2f, LabNotebookTheme.MarkerRed,  -3f);
+            BuildFormulaDecal(root.transform, "CO2 + H2O",new Vector3(-8f,  -2f, 9.95f), 4.4f, LabNotebookTheme.MarkerBlue, +2f);
+            BuildFormulaDecal(root.transform, "Fe -> Fe2O3", new Vector3( 7f, -3f, 9.95f), 4.0f, LabNotebookTheme.MarkerRed,  -5f);
+            BuildFormulaDecal(root.transform, "100°C",    new Vector3(-4f, -7f, 9.95f), 5.6f, LabNotebookTheme.MarkerBlue, +7f);
+        }
+
+        private static void BuildFormulaDecal(Transform parent, string text, Vector3 worldPos,
+            float fontSize, Color color, float zRotationDegrees)
+        {
+            var go = new GameObject("Formula_" + text);
+            go.transform.SetParent(parent, false);
+            go.transform.position = worldPos;
+            go.transform.rotation = Quaternion.Euler(0f, 0f, zRotationDegrees);
+
+            var tmp = go.AddComponent<TextMeshPro>();
+            tmp.text = text;
+            tmp.fontSize = fontSize;
+            tmp.color = color;
+            tmp.alignment = TextAlignmentOptions.Center;
+            tmp.fontStyle = FontStyles.Bold;
+            var caveat = LoadCaveat();
+            if (caveat != null) tmp.font = caveat;
+        }
+
+        private static Material CreateUnlitColorMaterial(string name, Color color)
+        {
+            string path = $"Assets/Materials/{name}.mat";
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (mat == null)
+            {
+                mat = new Material(Shader.Find("Unlit/Color"));
+                AssetDatabase.CreateAsset(mat, path);
+            }
+            mat.SetColor("_Color", color);
+            EditorUtility.SetDirty(mat);
+            return mat;
         }
 
         private static void WireEntry(SerializedProperty arr, int index, string materialName, AnimationCurve curve)
