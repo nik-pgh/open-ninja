@@ -97,7 +97,8 @@ namespace OpenNinja.EditorBuild
                 CopyOver(Path.Combine(webSrc, "index.html"),    Path.Combine(OutputDir, "index.html"));
                 CopyOver(Path.Combine(webSrc, "vercel.json"),   Path.Combine(OutputDir, "vercel.json"));
                 CopyOver(Path.Combine(webSrc, ".vercelignore"), Path.Combine(OutputDir, ".vercelignore"));
-                CopyOver(Path.Combine(webSrc, "og.png"),        Path.Combine(OutputDir, "og.png"));
+                CopyOver(Path.Combine(webSrc, "og.png"),         Path.Combine(OutputDir, "og.png"));
+                CopyOver(Path.Combine(webSrc, "logo.png"),       Path.Combine(OutputDir, "logo.png"));
 
                 // 2) Drop Unity's TemplateData/ (logo, default favicon, etc).
                 string templateData = Path.Combine(OutputDir, "TemplateData");
