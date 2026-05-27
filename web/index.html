@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#fdfcf7">
+  <meta name="description" content="Material Ninja — slice cubes of wood, stone, metal, crystal, rubber. Watch out for the spiked ones.">
+
+  <title>Material Ninja</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23fdfcf7'/%3E%3Cpath d='M16 12h32v40H16z' fill='none' stroke='%231a1a1a' stroke-width='3'/%3E%3Cpath d='M22 12v40' stroke='%23c83232' stroke-width='1.5'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-family='Georgia,serif' font-weight='700' font-size='22' fill='%231a1a1a'%3EM%3C/text%3E%3C/svg%3E">
+
+  <style>
+    :root {
+      --paper:     #fdfcf7;
+      --paper-2:   #f5f3e8;
+      --ink:       #1a1a1a;
+      --ink-soft:  #555;
+      --ink-red:   #c83232;
+      --rule:      rgba(40, 90, 140, 0.18);
+      --margin:    rgba(200, 50, 50, 0.55);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Caveat", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+
+    body {
+      display: grid;
+      grid-template-columns: minmax(280px, 380px) 1fr;
+      gap: 0;
+    }
+
+    .sidebar {
+      position: relative;
+      height: 100dvh;
+      padding: 48px 28px 24px 56px;
+      background: var(--paper);
+      background-image:
+        linear-gradient(transparent calc(36px - 1px), var(--rule) 36px),
+        linear-gradient(var(--paper), var(--paper));
+      background-size: 100% 36px, 100% 100%;
+      overflow-y: auto;
+      border-right: 1px dashed rgba(0,0,0,0.08);
+    }
+    .sidebar::before {
+      content: "";
+      position: absolute;
+      top: 0; bottom: 0;
+      left: 44px;
+      width: 2px;
+      background: var(--margin);
+    }
+
+    .sidebar h2 {
+      font-size: 56px;
+      font-weight: 700;
+      margin: 0 0 4px;
+      letter-spacing: -0.01em;
+      color: var(--ink);
+      transform: rotate(-1.5deg);
+      line-height: 0.9;
+    }
+    .sidebar .subtitle {
+      font-style: italic;
+      color: var(--ink-soft);
+      font-size: 22px;
+      margin-bottom: 32px;
+    }
+
+    ol.scores {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 24px;
+      counter-reset: rank;
+    }
+    ol.scores li {
+      counter-increment: rank;
+      display: grid;
+      grid-template-columns: 36px 1fr auto;
+      align-items: baseline;
+      gap: 10px;
+      padding: 6px 0;
+      border-bottom: 1px dashed rgba(0,0,0,0.06);
+      font-size: 28px;
+      line-height: 1.1;
+    }
+    ol.scores li::before {
+      content: counter(rank) ".";
+      color: var(--ink-soft);
+      font-style: italic;
+      text-align: right;
+    }
+    ol.scores li .name {
+      color: var(--ink);
+      font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    ol.scores li .score {
+      color: var(--ink-red);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    ol.scores li.me .name::after {
+      content: " (you)";
+      color: var(--ink-soft);
+      font-style: italic;
+      font-weight: 400;
+      font-size: 0.8em;
+    }
+
+    .empty {
+      font-style: italic;
+      color: var(--ink-soft);
+      padding: 16px 0;
+      font-size: 22px;
+    }
+
+    .sidebar .footer {
+      margin-top: auto;
+      padding-top: 24px;
+      font-style: italic;
+      font-size: 16px;
+      color: var(--ink-soft);
+      opacity: 0.7;
+      line-height: 1.4;
+    }
+    .sidebar .footer a { color: inherit; }
+
+    .refresh {
+      margin-top: 8px;
+      background: none;
+      border: 1.5px solid var(--ink);
+      padding: 6px 14px;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 20px;
+      cursor: pointer;
+      color: var(--ink);
+      transform: rotate(-1deg);
+      transition: transform 100ms ease;
+    }
+    .refresh:hover { transform: rotate(-1deg) translateY(-1px); }
+    .refresh:active { transform: rotate(-1deg) translateY(1px); }
+
+    .stage-wrap {
+      height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: var(--paper);
+      background-image:
+        linear-gradient(transparent calc(36px - 1px), var(--rule) 36px),
+        linear-gradient(var(--paper), var(--paper));
+      background-size: 100% 36px, 100% 100%;
+    }
+
+    .stage {
+      position: relative;
+      height: 100%;
+      aspect-ratio: 9 / 16;
+      max-width: 100%;
+      background: var(--paper);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06);
+      overflow: hidden;
+      border-radius: 4px;
+    }
+
+    #unity-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: var(--paper);
+      touch-action: none;
+      outline: none;
+    }
+
+    #boot {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--paper);
+      transition: opacity 350ms ease, visibility 350ms ease;
+      z-index: 2;
+      padding: 24px;
+    }
+    #boot.hidden { opacity: 0; visibility: hidden; }
+
+    #boot h1 {
+      font-size: clamp(56px, 11vw, 132px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1;
+      color: var(--ink);
+      margin: 0 0 8px;
+      transform: rotate(-2deg);
+      text-align: center;
+    }
+    #boot .pct {
+      margin-top: 14px;
+      color: var(--ink-soft);
+      font-size: clamp(18px, 3vw, 28px);
+      font-style: italic;
+    }
+    #boot .progress {
+      width: clamp(180px, 50%, 320px);
+      height: 4px;
+      background: var(--paper-2);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 32px;
+    }
+    #boot .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--ink-red);
+      transition: width 120ms linear;
+    }
+    #boot .error {
+      max-width: 80%;
+      margin-top: 16px;
+      padding: 10px 14px;
+      border: 1px solid var(--ink-red);
+      border-radius: 6px;
+      color: var(--ink-red);
+      font-size: 16px;
+      text-align: center;
+      display: none;
+      font-family: monospace;
+    }
+    #boot .error.show { display: block; }
+
+    @media (max-width: 720px), (max-aspect-ratio: 1/1) {
+      html, body { overflow: auto; }
+      body {
+        grid-template-columns: 1fr;
+        grid-template-rows: 100dvh auto;
+      }
+      .stage-wrap { padding: 0; }
+      .stage {
+        height: 100dvh;
+        width: 100%;
+        max-width: none;
+        aspect-ratio: auto;
+        border-radius: 0;
+        box-shadow: none;
+      }
+      .sidebar {
+        height: auto;
+        min-height: 50vh;
+        padding: 32px 20px 24px 44px;
+        border-right: none;
+        border-top: 1px dashed rgba(0,0,0,0.12);
+      }
+      .sidebar::before { left: 32px; }
+    }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <h2>top scores</h2>
+    <div class="subtitle">— field notes —</div>
+    <ol class="scores" id="scores">
+      <li class="empty-state"><span class="name" style="grid-column: 2 / -1">loading...</span></li>
+    </ol>
+    <button class="refresh" id="refresh">↻ refresh</button>
+    <div class="footer">
+      music: "High Alert" by @wyver9 (CC-BY-SA 3.0)<br>
+      sound: Kenney + OpenGameArt (CC0)
+    </div>
+  </aside>
+
+  <main class="stage-wrap">
+    <div class="stage">
+      <canvas id="unity-canvas" tabindex="-1"></canvas>
+      <div id="boot">
+        <h1>MATERIAL<br>NINJA</h1>
+        <div class="pct">loading...</div>
+        <div class="progress"><div class="progress-bar"></div></div>
+        <div class="error"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      document.addEventListener("gesturestart",  function (e) { e.preventDefault(); });
+      document.addEventListener("contextmenu",   function (e) { e.preventDefault(); });
+
+      var canvas      = document.getElementById("unity-canvas");
+      var boot        = document.getElementById("boot");
+      var progressBar = boot.querySelector(".progress-bar");
+      var pctText     = boot.querySelector(".pct");
+      var errBox      = boot.querySelector(".error");
+
+      var config = {
+        dataUrl:                "Build/WebGL.data.br",
+        frameworkUrl:           "Build/WebGL.framework.js.br",
+        codeUrl:                "Build/WebGL.wasm.br",
+        streamingAssetsUrl:     "StreamingAssets",
+        companyName:            "open-ninja",
+        productName:            "Material Ninja",
+        productVersion:         "1.0",
+        matchWebGLToCanvasSize: true,
+        devicePixelRatio:       Math.min(window.devicePixelRatio || 1, 2),
+      };
+
+      var script = document.createElement("script");
+      script.src = "Build/WebGL.loader.js";
+      script.onload = function () {
+        createUnityInstance(canvas, config, function (progress) {
+          var p = Math.max(0, Math.min(1, progress));
+          progressBar.style.width = (100 * p) + "%";
+          pctText.textContent = "loading " + Math.round(100 * p) + "%";
+        }).then(function () {
+          setTimeout(function () { boot.classList.add("hidden"); }, 150);
+          canvas.focus();
+        }).catch(function (e) {
+          errBox.textContent = "couldn't load: " + (e && e.message ? e.message : e);
+          errBox.classList.add("show");
+        });
+      };
+      script.onerror = function () {
+        errBox.textContent = "couldn't load loader.js";
+        errBox.classList.add("show");
+      };
+      document.body.appendChild(script);
+
+      // ---- Leaderboard ----
+      // Called by Unity's Leaderboard.jslib on each new personal-best.
+      window.submitNinjaScore = async function (entry) {
+        try {
+          if (!entry || !entry.nickname || typeof entry.score !== "number") return;
+          var res = await fetch("/api/scores", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(entry),
+          });
+          if (res.ok) {
+            localStorage.setItem("ninja:lastSubmit", JSON.stringify(entry));
+            await refreshScores();
+          }
+        } catch (_) { /* swallow */ }
+      };
+
+      var scoresList = document.getElementById("scores");
+      var meSnapshot = null;
+      try { meSnapshot = JSON.parse(localStorage.getItem("ninja:lastSubmit") || "null"); } catch (_) {}
+
+      function renderScores(list) {
+        if (!list || list.length === 0) {
+          scoresList.innerHTML = '<li class="empty-state"><span class="empty" style="grid-column: 2 / -1">no scores yet — be the first.</span></li>';
+          return;
+        }
+        var html = "";
+        var myName = meSnapshot && meSnapshot.nickname;
+        list.forEach(function (entry) {
+          var isMe = myName && entry.nickname === myName;
+          html +=
+            '<li' + (isMe ? ' class="me"' : '') + '>' +
+              '<span class="name">' + escapeHtml(entry.nickname) + '</span>' +
+              '<span class="score">' + Number(entry.score).toLocaleString() + '</span>' +
+            '</li>';
+        });
+        scoresList.innerHTML = html;
+      }
+
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      async function refreshScores() {
+        try {
+          var res = await fetch("/api/scores", { cache: "no-store" });
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          var json = await res.json();
+          renderScores(json.top || []);
+        } catch (_) {
+          scoresList.innerHTML = '<li class="empty-state"><span class="empty" style="grid-column: 2 / -1">couldn\'t load scores.</span></li>';
+        }
+      }
+
+      document.getElementById("refresh").addEventListener("click", refreshScores);
+      refreshScores();
+      setInterval(refreshScores, 20000);
+    })();
+  </script>
+</body>
+</html>

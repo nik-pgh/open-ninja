@@ -1,0 +1,6 @@
+ruvector.db
+ruvector.db.lock
+agentdb.rvf
+agentdb.rvf.lock
+.DS_Store
+*.log

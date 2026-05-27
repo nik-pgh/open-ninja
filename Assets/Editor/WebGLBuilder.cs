@@ -17,6 +17,17 @@ namespace OpenNinja.EditorBuild
     {
         public const string OutputDir = "Build/WebGL";
 
+        private static void CopyOver(string src, string dst)
+        {
+            if (!File.Exists(src))
+            {
+                Debug.LogWarning($"WebGLBuilder: missing {src}, skipping overlay");
+                return;
+            }
+            Directory.CreateDirectory(Path.GetDirectoryName(dst));
+            File.Copy(src, dst, overwrite: true);
+        }
+
         [MenuItem("Tools/Build WebGL")]
         public static void Execute()
         {
@@ -73,6 +84,40 @@ namespace OpenNinja.EditorBuild
 
             if (summary.result != BuildResult.Succeeded)
                 throw new Exception($"WebGL build failed: {summary.result}");
+
+            // ---- Overlay custom landing page + API + Vercel config ----
+            // Unity wipes Build/WebGL on each build, so anything we want to ship
+            // alongside the WebGL output has to be copied back in from the
+            // checked-in web/ source folder.
+            string webSrc = "web";
+            if (Directory.Exists(webSrc))
+            {
+                // 1) Replace Unity's default index.html with our custom one.
+                CopyOver(Path.Combine(webSrc, "index.html"),    Path.Combine(OutputDir, "index.html"));
+                CopyOver(Path.Combine(webSrc, "vercel.json"),   Path.Combine(OutputDir, "vercel.json"));
+                CopyOver(Path.Combine(webSrc, ".vercelignore"), Path.Combine(OutputDir, ".vercelignore"));
+
+                // 2) Drop Unity's TemplateData/ (logo, default favicon, etc).
+                string templateData = Path.Combine(OutputDir, "TemplateData");
+                if (Directory.Exists(templateData)) Directory.Delete(templateData, true);
+
+                // 3) Copy serverless functions (api/) into the deploy root.
+                string apiSrc = Path.Combine(webSrc, "api");
+                string apiDst = Path.Combine(OutputDir, "api");
+                if (Directory.Exists(apiSrc))
+                {
+                    if (Directory.Exists(apiDst)) Directory.Delete(apiDst, true);
+                    Directory.CreateDirectory(apiDst);
+                    foreach (var f in Directory.GetFiles(apiSrc))
+                        File.Copy(f, Path.Combine(apiDst, Path.GetFileName(f)), overwrite: true);
+                }
+
+                Debug.Log("WebGLBuilder: overlaid web/ → Build/WebGL/");
+            }
+            else
+            {
+                Debug.LogWarning("WebGLBuilder: web/ source folder missing; default Unity output will deploy as-is.");
+            }
         }
     }
 }

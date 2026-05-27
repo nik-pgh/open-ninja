@@ -45,6 +45,9 @@ namespace OpenNinja
         {
             if (candidate <= BestScore) return false;
             BestScore = candidate;
+            // WebGL: forward new personal-bests to the leaderboard backend.
+            // No-op on editor + standalone (see LeaderboardBridge).
+            LeaderboardBridge.TrySubmit(Nickname, candidate);
             return true;
         }
     }
