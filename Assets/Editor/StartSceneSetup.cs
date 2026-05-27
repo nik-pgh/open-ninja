@@ -621,7 +621,7 @@ namespace OpenNinja.EditorSetup
             tmp.alignment = alignment;
             tmp.fontStyle = style;
             if (font != null) tmp.font = font;
-            tmp.enableWordWrapping = true;
+            tmp.textWrappingMode = TextWrappingModes.Normal;
             if (preferredWidth > 0)
             {
                 var le = go.AddComponent<LayoutElement>();

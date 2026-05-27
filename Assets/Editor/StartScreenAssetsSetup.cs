@@ -4,6 +4,7 @@ using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.TextCore.LowLevel;
 
 namespace OpenNinja.EditorSetup
 {
@@ -88,7 +89,7 @@ namespace OpenNinja.EditorSetup
                 enableMultiAtlasSupport: true);
 
             AssetDatabase.CreateAsset(sdf, LabNotebookTheme.FontAssetPath);
-            sdf.TryAddCharacters("★↗—♥−", out _, includeMissingCharactersInError: false);
+            sdf.TryAddCharacters("★↗—♥−", out _);
             EditorUtility.SetDirty(sdf);
             return "sdf: generated";
         }
