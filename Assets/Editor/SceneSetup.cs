@@ -33,7 +33,11 @@ namespace OpenNinja.EditorSetup
             var skyMat = CreateWhiteboardSky();
             RenderSettings.skybox = skyMat;
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.85f, 0.85f, 0.85f, 1f);
+            RenderSettings.ambientLight = new Color(1.0f, 1.0f, 1.0f, 1f);
+            // Default-on fog darkens distant unlit geometry — the back wall
+            // at z=10 is far enough from the camera that fog reads as a
+            // visibly dimmer grey, ruining the bright-cleanroom feel.
+            RenderSettings.fog = false;
             DynamicGI.UpdateEnvironment();
             log.Add("skybox + ambient set");
 
@@ -57,9 +61,9 @@ namespace OpenNinja.EditorSetup
             {
                 dirLight.transform.rotation = Quaternion.Euler(60f, -20f, 0f);
                 dirLight.color = new Color(1.0f, 1.0f, 1.0f);
-                dirLight.intensity = 0.85f;
+                dirLight.intensity = 1.1f;
                 dirLight.shadows = LightShadows.Soft;
-                dirLight.shadowStrength = 0.35f;
+                dirLight.shadowStrength = 0.25f;
                 log.Add("directional light tuned");
             }
 
@@ -747,10 +751,15 @@ namespace OpenNinja.EditorSetup
 
             // Back wall: a 40×30 quad far enough behind the playfield (z=10) to
             // fill the camera's FOV and act as a flat whiteboard surface.
+            // Unity's Quad primitive faces +Z; we need it facing -Z so the
+            // camera (at z=-12 looking forward) sees the front. Without this
+            // flip, backface culling makes the wall invisible and we end up
+            // looking straight through to the procedural skybox.
             var wall = GameObject.CreatePrimitive(PrimitiveType.Quad);
             wall.name = "Whiteboard";
             wall.transform.SetParent(root.transform, false);
             wall.transform.position = new Vector3(0f, 2f, 10f);
+            wall.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
             wall.transform.localScale = new Vector3(40f, 30f, 1f);
             Object.DestroyImmediate(wall.GetComponent<Collider>());
             wall.GetComponent<MeshRenderer>().sharedMaterial =
@@ -758,6 +767,9 @@ namespace OpenNinja.EditorSetup
 
             // Rubber floor: a 40×20 horizontal quad below the killzone (y=-10),
             // tilted 90° so it lies flat. Slightly darker grey than the wall.
+            // Floor: tilted 90° about X so its +Z face becomes +Y (pointing
+            // up at the camera). The 180° flip around Y is unnecessary here
+            // because the tilted +Z is already facing up.
             var floor = GameObject.CreatePrimitive(PrimitiveType.Quad);
             floor.name = "RubberFloor";
             floor.transform.SetParent(root.transform, false);
