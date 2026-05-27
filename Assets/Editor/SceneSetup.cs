@@ -44,7 +44,7 @@ namespace OpenNinja.EditorSetup
             log.Add("camera positioned");
 
             // ---- Tune the directional light ----
-            var dirLight = Object.FindFirstObjectByType<Light>();
+            var dirLight = Object.FindAnyObjectByType<Light>();
             if (dirLight != null && dirLight.type == LightType.Directional)
             {
                 dirLight.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
@@ -183,7 +183,7 @@ namespace OpenNinja.EditorSetup
             scaler.referenceResolution = new Vector2(1920, 1080);
 
             // EventSystem.
-            if (Object.FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>() == null)
+            if (Object.FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>() == null)
             {
                 var es = new GameObject("EventSystem",
                     typeof(UnityEngine.EventSystems.EventSystem),
@@ -287,7 +287,7 @@ namespace OpenNinja.EditorSetup
                 tmp.fontSize = 72f;
                 tmp.alignment = TextAlignmentOptions.Center;
                 tmp.color = new Color(1f, 0.25f, 0.3f, 1f);
-                tmp.enableWordWrapping = false;
+                tmp.textWrappingMode = TextWrappingModes.NoWrap;
                 hearts[i] = tmp;
             }
             var livesView = livesRow.AddComponent<LivesView>();
@@ -395,7 +395,7 @@ namespace OpenNinja.EditorSetup
             // ---- Bake reflection probe ----
             // Re-fetch the probe from the saved scene; the local reference may have been
             // invalidated by the scene save.
-            var bakedProbe = Object.FindFirstObjectByType<ReflectionProbe>();
+            var bakedProbe = Object.FindAnyObjectByType<ReflectionProbe>();
             if (bakedProbe != null)
             {
                 string probePath = "Assets/Scenes/MainScene/ReflectionProbe-0.exr";

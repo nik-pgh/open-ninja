@@ -17,7 +17,8 @@ namespace OpenNinja.EditorSetup
             PlayerSettings.defaultIsNativeResolution = false;
             PlayerSettings.defaultScreenWidth = 1080;
             PlayerSettings.defaultScreenHeight = 1920;
-            PlayerSettings.defaultScreenOrientation = UIOrientation.Portrait;
+            // Unity 6 removed the standalone `defaultScreenOrientation` API; the
+            // four autorotate flags below pin the runtime orientation to portrait.
             PlayerSettings.allowedAutorotateToPortrait = true;
             PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
             PlayerSettings.allowedAutorotateToLandscapeLeft = false;
