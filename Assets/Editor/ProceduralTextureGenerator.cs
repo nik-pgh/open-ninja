@@ -267,7 +267,43 @@ namespace OpenNinja.EditorSetup
 
         private static void GenerateRubber(string name)
         {
-            SaveStubPair(name, new Color(1f, 0.9f, 0.2f, 1f));
+            Random.InitState("Rubber".GetHashCode());
+            Color baseColor = new Color(1f, 0.9f, 0.2f, 1f);
+            const int DimpleGrid = 8;
+            float gridStep = TexSize / (float)DimpleGrid;
+            float dimpleRadius = gridStep * 0.45f;
+
+            var height = new float[TexSize * TexSize];
+            var albedo = new Color[TexSize * TexSize];
+
+            for (int y = 0; y < TexSize; y++)
+            {
+                for (int x = 0; x < TexSize; x++)
+                {
+                    // Slight per-pixel color variation.
+                    float n = Mathf.PerlinNoise(x * 0.03f, y * 0.03f);
+                    Color tone = baseColor * Mathf.Lerp(0.95f, 1.05f, n);
+                    tone.r = Mathf.Clamp01(tone.r);
+                    tone.g = Mathf.Clamp01(tone.g);
+                    tone.b = Mathf.Clamp01(tone.b);
+                    tone.a = 1f;
+                    albedo[y * TexSize + x] = tone;
+
+                    // Find nearest grid center.
+                    float gx = Mathf.Round(x / gridStep) * gridStep;
+                    float gy = Mathf.Round(y / gridStep) * gridStep;
+                    float d = Vector2.Distance(new Vector2(x, y), new Vector2(gx, gy));
+
+                    // Smooth depression: 0 at radius, depth at center.
+                    float depth = Mathf.Clamp01(1f - d / dimpleRadius);
+                    // Quadratic falloff for a bowl shape.
+                    height[y * TexSize + x] = -depth * depth * 0.4f; // negative → indented
+                }
+            }
+
+            SaveTexture(albedo, $"{OutputDir}/{name}_Albedo.png", isNormalMap: false);
+            var normalPixels = HeightToNormal(height, TexSize, strength: 4f);
+            SaveTexture(normalPixels, $"{OutputDir}/{name}_Normal.png", isNormalMap: true);
         }
 
         // ---- Stub helper: solid albedo + flat normal ----
