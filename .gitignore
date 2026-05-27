@@ -117,3 +117,9 @@ InitTestScene*.unity*
 # Build artifacts
 /Build/
 .vercel/
+
+# Dynamic TMP SDF font atlases — Unity bakes glyphs into these on every
+# play session. Tracking them produces noisy diffs and merge conflicts
+# without buying anything; they regenerate automatically on first play.
+/Assets/Fonts/Caveat-Bold SDF.asset
+/Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Fallback.asset
