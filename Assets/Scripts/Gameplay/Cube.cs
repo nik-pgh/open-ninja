@@ -43,6 +43,13 @@ namespace OpenNinja
             _rb.mass = material.mass;
             _rb.linearDamping = 0.05f;
             _rb.angularDamping = 0.1f;
+            // Lock cubes to the z=0 play plane and constrain tumble to the
+            // camera-facing axis. Without this, cube-cube and cube-wall
+            // collisions can push cubes off-plane just enough that the blade
+            // sphere-cast (at z=0, radius 0.25) misses them entirely.
+            _rb.constraints = RigidbodyConstraints.FreezePositionZ
+                            | RigidbodyConstraints.FreezeRotationX
+                            | RigidbodyConstraints.FreezeRotationY;
             transform.localScale = Vector3.one * material.displayScale;
 
             if (_renderer != null && material.renderMaterial != null)

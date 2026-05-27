@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace OpenNinja
@@ -68,11 +69,11 @@ namespace OpenNinja
 
         private void OnQuitClicked()
         {
-#if UNITY_EDITOR
-            UnityEditor.EditorApplication.isPlaying = false;
-#else
-            Application.Quit();
-#endif
+            // "Pack Up" → return to the lab notebook (StartScene). Restore
+            // timeScale so the next scene runs at normal speed; GameManager
+            // sets it to 0 on game-over.
+            Time.timeScale = 1f;
+            SceneManager.LoadScene("StartScene");
         }
     }
 }
