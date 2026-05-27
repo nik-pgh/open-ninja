@@ -127,7 +127,33 @@ namespace OpenNinja.EditorSetup
 
         private static void GenerateMetal(string name)
         {
-            SaveStubPair(name, new Color(0.3f, 0.3f, 0.32f, 1f));
+            Random.InitState("Metal".GetHashCode());
+            Color baseColor = new Color(0.3f, 0.3f, 0.32f, 1f);
+
+            var height = new float[TexSize * TexSize];
+            var albedo = new Color[TexSize * TexSize];
+
+            for (int y = 0; y < TexSize; y++)
+            {
+                // Per-row sinusoidal line.
+                float line = (Mathf.Sin(y * 1.2f) * 0.5f + 0.5f) * 0.06f;
+
+                for (int x = 0; x < TexSize; x++)
+                {
+                    // Tiny per-row scratch using horizontal-favoring Perlin.
+                    float scratches = Mathf.PerlinNoise(x * 0.01f, y * 0.3f) * 0.04f;
+                    float darkness = line + scratches;
+
+                    Color tone = baseColor * (1f - darkness);
+                    tone.a = 1f;
+                    albedo[y * TexSize + x] = tone;
+                    height[y * TexSize + x] = darkness;
+                }
+            }
+
+            SaveTexture(albedo, $"{OutputDir}/{name}_Albedo.png", isNormalMap: false);
+            var normalPixels = HeightToNormal(height, TexSize, strength: 2f);
+            SaveTexture(normalPixels, $"{OutputDir}/{name}_Normal.png", isNormalMap: true);
         }
 
         private static void GenerateCrystal(string name)
