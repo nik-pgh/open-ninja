@@ -41,8 +41,8 @@ namespace OpenNinja
             if (_renderer == null) _renderer = GetComponentInChildren<MeshRenderer>();
 
             _rb.mass = material.mass;
-            _rb.drag = 0.05f;
-            _rb.angularDrag = 0.1f;
+            _rb.linearDamping = 0.05f;
+            _rb.angularDamping = 0.1f;
             transform.localScale = Vector3.one * material.displayScale;
 
             if (_renderer != null && material.renderMaterial != null)

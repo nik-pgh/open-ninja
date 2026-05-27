@@ -16,7 +16,7 @@ MonoBehaviour:
   role: 0
   basePoints: 2
   mass: 1
-  displayScale: 1
+  displayScale: 1.5
   bouncinessMultiplier: 1
   launchImpulseOverride: {x: 0, y: 0}
   renderMaterial: {fileID: 2100000, guid: d852136a784bc4935837a233eb9b324d, type: 2}

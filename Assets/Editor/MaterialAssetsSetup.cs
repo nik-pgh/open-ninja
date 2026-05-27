@@ -55,22 +55,24 @@ namespace OpenNinja.EditorSetup
                 EditorUtility.SetDirty(pm);
 
             // 4) CubeMaterial SO assets.
-            MakeCubeMaterial("Wood",    role: CubeRole.Normal, basePts: 1, mass: 0.4f, scale: 0.7f,
+            // Display scales bumped 1.5x from the original spec so material textures
+            // read clearly at gameplay distance.
+            MakeCubeMaterial("Wood",    role: CubeRole.Normal, basePts: 1, mass: 0.4f, scale: 1.05f,
                 renderMat: woodMat,    burst: new Color(0.65f, 0.45f, 0.25f, 1f),
                 bounceMult: 1.0f, launchOverride: new Vector2(6f, 12f));
-            MakeCubeMaterial("Stone",   role: CubeRole.Normal, basePts: 2, mass: 1.0f, scale: 1.0f,
+            MakeCubeMaterial("Stone",   role: CubeRole.Normal, basePts: 2, mass: 1.0f, scale: 1.5f,
                 renderMat: stoneMat,   burst: new Color(0.7f, 0.7f, 0.7f, 1f),
                 bounceMult: 1.0f, launchOverride: Vector2.zero);
-            MakeCubeMaterial("Metal",   role: CubeRole.Bonus,  basePts: 3, mass: 3.0f, scale: 1.4f,
+            MakeCubeMaterial("Metal",   role: CubeRole.Bonus,  basePts: 3, mass: 3.0f, scale: 2.0f,
                 renderMat: metalMat,   burst: new Color(0.5f, 0.55f, 0.6f, 1f),
                 bounceMult: 0.9f, launchOverride: new Vector2(10f, 14f));
-            MakeCubeMaterial("Crystal", role: CubeRole.Bonus,  basePts: 5, mass: 0.3f, scale: 0.9f,
+            MakeCubeMaterial("Crystal", role: CubeRole.Bonus,  basePts: 5, mass: 0.3f, scale: 1.35f,
                 renderMat: crystalMat, burst: new Color(0.7f, 0.95f, 1f, 1f),
                 bounceMult: 1.0f, launchOverride: Vector2.zero);
-            MakeCubeMaterial("Spiked",  role: CubeRole.Danger, basePts: 0, mass: 1.2f, scale: 1.0f,
+            MakeCubeMaterial("Spiked",  role: CubeRole.Danger, basePts: 0, mass: 1.2f, scale: 1.5f,
                 renderMat: spikedMat,  burst: new Color(0.4f, 0.0f, 0.4f, 1f),
                 bounceMult: 1.0f, launchOverride: Vector2.zero);
-            MakeCubeMaterial("Rubber",  role: CubeRole.Normal, basePts: 2, mass: 0.5f, scale: 0.9f,
+            MakeCubeMaterial("Rubber",  role: CubeRole.Normal, basePts: 2, mass: 0.5f, scale: 1.35f,
                 renderMat: rubberMat,  burst: new Color(1f, 0.95f, 0.3f, 1f),
                 bounceMult: 1.4f, launchOverride: Vector2.zero);
 
