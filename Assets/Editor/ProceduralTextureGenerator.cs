@@ -222,7 +222,47 @@ namespace OpenNinja.EditorSetup
 
         private static void GenerateSpiked(string name)
         {
-            SaveStubPair(name, new Color(0.1f, 0.1f, 0.1f, 1f));
+            Random.InitState("Spiked".GetHashCode());
+            Color baseColor = new Color(0.1f, 0.1f, 0.1f, 1f);
+            Color peakColor = new Color(0.35f, 0.1f, 0.35f, 1f);
+            const int CellCount = 36;
+
+            var (centers, cellMap, _) = VoronoiCells(CellCount, TexSize, seed: "Spiked".GetHashCode());
+
+            var height = new float[TexSize * TexSize];
+            var albedo = new Color[TexSize * TexSize];
+
+            for (int y = 0; y < TexSize; y++)
+            {
+                for (int x = 0; x < TexSize; x++)
+                {
+                    int cellIdx = cellMap[y * TexSize + x];
+                    float dSelf = Vector2.Distance(new Vector2(x, y), centers[cellIdx]);
+
+                    // Estimated cell radius — distance to nearest other center / 2.
+                    float dOther = float.MaxValue;
+                    for (int i = 0; i < CellCount; i++)
+                    {
+                        if (i == cellIdx) continue;
+                        float d = Vector2.Distance(centers[cellIdx], centers[i]);
+                        if (d < dOther) dOther = d;
+                    }
+                    float radius = dOther * 0.5f;
+                    float t = Mathf.Clamp01(1f - dSelf / radius); // 1 at center, 0 at edge
+
+                    // Pyramid shading: center is lit, edges are dark.
+                    Color tone = Color.Lerp(baseColor, peakColor, t * 0.7f);
+                    tone.a = 1f;
+                    albedo[y * TexSize + x] = tone;
+
+                    // Height = pyramid peak; full strength at center, 0 at edge.
+                    height[y * TexSize + x] = t;
+                }
+            }
+
+            SaveTexture(albedo, $"{OutputDir}/{name}_Albedo.png", isNormalMap: false);
+            var normalPixels = HeightToNormal(height, TexSize, strength: 8f);
+            SaveTexture(normalPixels, $"{OutputDir}/{name}_Normal.png", isNormalMap: true);
         }
 
         private static void GenerateRubber(string name)
