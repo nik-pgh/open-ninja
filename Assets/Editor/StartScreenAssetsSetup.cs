@@ -144,7 +144,7 @@ namespace OpenNinja.EditorSetup
                 "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
                 "abcdefghijklmnopqrstuvwxyz" +
                 "[\\]^_`{|}~" +
-                "★↗—♥−×";
+                "★↗↓—♥−×";
             sdf.TryAddCharacters(preload, out string missing);
             if (!string.IsNullOrEmpty(missing))
                 Debug.LogWarning($"Caveat SDF: missing glyphs for '{missing}'");

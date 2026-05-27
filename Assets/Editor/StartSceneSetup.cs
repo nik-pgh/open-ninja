@@ -55,8 +55,8 @@ namespace OpenNinja.EditorSetup
 
             var (table, rowContainer) = BuildInfoTable(canvas);
 
-            // Step 6: Subject divider
-            BuildDivider(canvas, "subject", new Vector2(0, -1280));
+            // Step 6: Subject divider — positioned after the 640-tall specimens table.
+            BuildDivider(canvas, "subject", new Vector2(0, -1360));
 
             var input  = BuildNicknameInput(canvas);
             var button = BuildStartButton(canvas);
@@ -89,11 +89,13 @@ namespace OpenNinja.EditorSetup
             var root = new GameObject("CubeInfoRow",
                 typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
             var rt = (RectTransform)root.transform;
-            rt.sizeDelta = new Vector2(920, 120);
+            // 96px row height keeps all six specimens inside the table area
+            // between the specimens and subject dividers.
+            rt.sizeDelta = new Vector2(920, 96);
 
             var hlg = root.GetComponent<HorizontalLayoutGroup>();
             hlg.spacing = 18;
-            hlg.padding = new RectOffset(20, 20, 12, 12);
+            hlg.padding = new RectOffset(20, 20, 8, 8);
             hlg.childAlignment = TextAnchor.MiddleLeft;
             hlg.childForceExpandWidth = false;
             hlg.childForceExpandHeight = false;
@@ -104,7 +106,7 @@ namespace OpenNinja.EditorSetup
             var iconWrap = new GameObject("IconWrap", typeof(RectTransform), typeof(LayoutElement));
             iconWrap.transform.SetParent(root.transform, false);
             var iconWrapLE = iconWrap.GetComponent<LayoutElement>();
-            iconWrapLE.preferredWidth = 88; iconWrapLE.preferredHeight = 88;
+            iconWrapLE.preferredWidth = 76; iconWrapLE.preferredHeight = 76;
 
             var iconShadow = new GameObject("IconShadow", typeof(RectTransform), typeof(Image));
             iconShadow.transform.SetParent(iconWrap.transform, false);
@@ -350,7 +352,8 @@ namespace OpenNinja.EditorSetup
             rt.anchorMax = new Vector2(0.5f, 1f);
             rt.pivot = new Vector2(0.5f, 1f);
             rt.anchoredPosition = new Vector2(0, -700);
-            rt.sizeDelta = new Vector2(920, 560);
+            // 640px holds six 96-tall rows + spacing comfortably.
+            rt.sizeDelta = new Vector2(920, 640);
 
             var container = new GameObject("RowContainer",
                 typeof(RectTransform), typeof(VerticalLayoutGroup));
@@ -383,7 +386,7 @@ namespace OpenNinja.EditorSetup
             wrt.anchorMin = new Vector2(0.5f, 1f);
             wrt.anchorMax = new Vector2(0.5f, 1f);
             wrt.pivot = new Vector2(0.5f, 1f);
-            wrt.anchoredPosition = new Vector2(0, -1340);
+            wrt.anchoredPosition = new Vector2(0, -1420);
             wrt.sizeDelta = new Vector2(700, 200);
 
             var label = NewLabel(wrap.transform, "Label", "Nickname:",
@@ -526,17 +529,20 @@ namespace OpenNinja.EditorSetup
         private static GameObject BuildTapHereArrow(GameObject canvas)
         {
             var caveat = LoadCaveat();
-            var go = NewLabel(canvas.transform, "TapHereArrow", "↗ tap here",
+            // Arrow now points DOWN at the Start button from above it, keeping it
+            // safely inside the canvas (the previous right-side placement was
+            // overflowing the canvas width).
+            var go = NewLabel(canvas.transform, "TapHereArrow", "tap here ↓",
                 LabNotebookTheme.ArrowSize, LabNotebookTheme.InkRed,
-                TextAlignmentOptions.Left, caveat, FontStyles.Italic,
+                TextAlignmentOptions.Center, caveat, FontStyles.Italic,
                 preferredWidth: 0);
             var rt = (RectTransform)go.transform;
             rt.anchorMin = new Vector2(0.5f, 1f);
             rt.anchorMax = new Vector2(0.5f, 1f);
-            rt.pivot = new Vector2(0, 1f);
-            rt.anchoredPosition = new Vector2(180, -1690);
-            rt.sizeDelta = new Vector2(300, 60);
-            rt.localRotation = Quaternion.Euler(0, 0, -8f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(180, -1620);
+            rt.sizeDelta = new Vector2(280, 60);
+            rt.localRotation = Quaternion.Euler(0, 0, 4f);
             return go;
         }
 
