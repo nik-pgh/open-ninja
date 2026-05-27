@@ -299,10 +299,11 @@ namespace OpenNinja.EditorSetup
             var badgeView = comboWrap.AddComponent<ComboBadgeView>();
             var badgeSO = new SerializedObject(badgeView);
             SetRef(badgeSO, "label", comboLabelGO.GetComponent<TMP_Text>());
-            SetRef(badgeSO, "root", comboVisual.gameObject);
+            var comboVisualWrap = comboVisual.transform.parent.gameObject;
+            SetRef(badgeSO, "root", comboVisualWrap);
             SetRef(badgeSO, "timerFill", timerFillImg);
             badgeSO.ApplyModifiedPropertiesWithoutUndo();
-            comboVisual.gameObject.SetActive(false);
+            comboVisualWrap.SetActive(false);
 
             // LivesRow — sticky note in top-right with three TMP hearts.
             var livesCard = BuildStickyNote(canvasGO.transform, "LivesRow",
@@ -472,14 +473,15 @@ namespace OpenNinja.EditorSetup
             // Attach GameOverView and wire references.
             var goView = gameOverHost.AddComponent<GameOverView>();
             var goSO = new SerializedObject(goView);
-            SetRef(goSO, "panelRoot", panel.gameObject);
+            var panelWrap = panel.transform.parent.gameObject;
+            SetRef(goSO, "panelRoot", panelWrap);
             SetRef(goSO, "finalScoreLabel", finalScoreGO.GetComponent<TMP_Text>());
             SetRef(goSO, "restartButton", restartBtn);
             SetRef(goSO, "quitButton", exitBtn);
             SetRef(goSO, "newBestFlag", newBestWrap);
             SetRef(goSO, "spawner", spawner);
             goSO.ApplyModifiedPropertiesWithoutUndo();
-            panel.gameObject.SetActive(false);
+            panelWrap.SetActive(false);
 
             // Wire the slice burst prefab into the unified Cube prefab.
             var cubePrefabAsset = AssetDatabase.LoadAssetAtPath<Cube>("Assets/Prefabs/Cube.prefab");
