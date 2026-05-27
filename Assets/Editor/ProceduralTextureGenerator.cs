@@ -80,7 +80,49 @@ namespace OpenNinja.EditorSetup
 
         private static void GenerateStone(string name)
         {
-            SaveStubPair(name, new Color(0.55f, 0.55f, 0.55f, 1f));
+            Random.InitState("Stone".GetHashCode());
+            Color baseColor = new Color(0.55f, 0.55f, 0.55f, 1f);
+            Color micaColor = new Color(0.18f, 0.18f, 0.22f, 1f);
+
+            float xOffset = Random.value * 100f;
+            float yOffset = Random.value * 100f;
+
+            var height = new float[TexSize * TexSize];
+            var albedo = new Color[TexSize * TexSize];
+
+            for (int y = 0; y < TexSize; y++)
+            {
+                for (int x = 0; x < TexSize; x++)
+                {
+                    float u = (x + xOffset);
+                    float v = (y + yOffset);
+
+                    // 4-octave Perlin noise.
+                    float n = Mathf.PerlinNoise(u * 0.04f, v * 0.04f) * 0.5f
+                            + Mathf.PerlinNoise(u * 0.08f, v * 0.08f) * 0.25f
+                            + Mathf.PerlinNoise(u * 0.16f, v * 0.16f) * 0.125f
+                            + Mathf.PerlinNoise(u * 0.32f, v * 0.32f) * 0.0625f;
+                    float lum = Mathf.Lerp(0.4f, 0.7f, n);
+
+                    Color tone = baseColor * lum;
+                    tone.a = 1f;
+
+                    // Mica flecks: rare dark spots based on independent noise.
+                    float fleckNoise = Mathf.PerlinNoise(u * 0.9f + 50f, v * 0.9f + 50f);
+                    if (fleckNoise > 0.93f)
+                    {
+                        tone = micaColor;
+                        n -= 0.3f;
+                    }
+
+                    albedo[y * TexSize + x] = tone;
+                    height[y * TexSize + x] = n;
+                }
+            }
+
+            SaveTexture(albedo, $"{OutputDir}/{name}_Albedo.png", isNormalMap: false);
+            var normalPixels = HeightToNormal(height, TexSize, strength: 6f);
+            SaveTexture(normalPixels, $"{OutputDir}/{name}_Normal.png", isNormalMap: true);
         }
 
         private static void GenerateMetal(string name)
