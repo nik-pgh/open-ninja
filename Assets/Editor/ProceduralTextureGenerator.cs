@@ -33,7 +33,49 @@ namespace OpenNinja.EditorSetup
 
         private static void GenerateWood(string name)
         {
-            SaveStubPair(name, new Color(0.55f, 0.35f, 0.2f, 1f));
+            Random.InitState("Wood".GetHashCode());
+            Color baseColor = new Color(0.55f, 0.35f, 0.2f, 1f);
+            Color darkAccent = new Color(0.3f, 0.18f, 0.08f, 1f);
+
+            // Knot spots — rare; ~3 cells per 256 px texture.
+            var (knots, _, knotDist) = VoronoiCells(3, TexSize, seed: 7341);
+            const float knotRadius = 18f;
+
+            var height = new float[TexSize * TexSize];
+            var albedo = new Color[TexSize * TexSize];
+
+            // Random per-texture offset so grain doesn't always start at the same x.
+            float xOffset = Random.value * 100f;
+
+            for (int y = 0; y < TexSize; y++)
+            {
+                for (int x = 0; x < TexSize; x++)
+                {
+                    // Vertical grain bands: two-octave Perlin along x with a small y-variation
+                    // so the bands aren't perfectly straight.
+                    float u = (x + xOffset) * 0.04f;
+                    float v = y * 0.005f;
+                    float band = Mathf.PerlinNoise(u, v) * 0.7f
+                               + Mathf.PerlinNoise(u * 3f, v) * 0.3f;
+                    float darkness = Mathf.Pow(band, 2f);
+
+                    // Tiny per-pixel noise to break tiling.
+                    float dither = (Mathf.PerlinNoise(x * 0.6f, y * 0.6f) - 0.5f) * 0.04f;
+
+                    // Knot influence: if any knot's distance is within radius, push toward darkAccent.
+                    float knotMix = 0f;
+                    float d = knotDist[y * TexSize + x];
+                    if (d < knotRadius) knotMix = Mathf.SmoothStep(1f, 0f, d / knotRadius);
+
+                    Color baseTone = Color.Lerp(baseColor, darkAccent, darkness * 0.55f + dither);
+                    albedo[y * TexSize + x] = Color.Lerp(baseTone, darkAccent, knotMix * 0.85f);
+                    height[y * TexSize + x] = darkness + knotMix * 0.4f;
+                }
+            }
+
+            SaveTexture(albedo, $"{OutputDir}/{name}_Albedo.png", isNormalMap: false);
+            var normalPixels = HeightToNormal(height, TexSize, strength: 8f);
+            SaveTexture(normalPixels, $"{OutputDir}/{name}_Normal.png", isNormalMap: true);
         }
 
         private static void GenerateStone(string name)
