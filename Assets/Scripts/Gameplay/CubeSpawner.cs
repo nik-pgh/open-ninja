@@ -1,18 +1,27 @@
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace OpenNinja
 {
     /// <summary>
-    /// Spawns cubes from a horizontal line at the bottom of the play area, with
-    /// difficulty curves driving the spawn interval and danger-cube probability.
+    /// Spawns cubes from a horizontal line at the bottom of the play area.
+    /// The cube material is chosen by a weighted roll over a configured list,
+    /// where each entry's weight is an AnimationCurve evaluated at elapsed
+    /// run time. Each material can also override the launch impulse range.
     /// </summary>
     public class CubeSpawner : MonoBehaviour
     {
-        [Header("Prefabs")]
-        [SerializeField] private Cube greenPrefab;
-        [SerializeField] private Cube redPrefab;
-        [SerializeField] private Cube blackPrefab;
+        [Serializable]
+        public struct MaterialEntry
+        {
+            public CubeMaterial material;
+            public AnimationCurve weightOverTime;
+        }
+
+        [Header("Prefab")]
+        [SerializeField] private Cube cubePrefab;
 
         [Header("Spawn line")]
         [SerializeField] private Transform spawnLineLeft;
@@ -21,13 +30,12 @@ namespace OpenNinja
         [Header("Difficulty")]
         [SerializeField] private AnimationCurve spawnIntervalOverTime =
             AnimationCurve.Linear(0f, 0.7f, 60f, 0.3f);
-        [SerializeField] private AnimationCurve dangerProbabilityOverTime =
-            AnimationCurve.Linear(0f, 0.05f, 60f, 0.15f);
-        [SerializeField, Range(0f, 1f)] private float redWeightOfNonDanger = 0.25f;
+        [SerializeField] private List<MaterialEntry> entries = new();
 
-        [Header("Launch impulse")]
-        [SerializeField] private Vector2 launchImpulseRange = new(7f, 11f);
-        [SerializeField] private Vector2 sideImpulseRange = new(0f, 2f);
+        [Header("Launch impulse (defaults; per-material override wins if set)")]
+        [SerializeField] private Vector2 launchImpulseRange = new(5f, 14f);
+        [SerializeField] private Vector2 sideImpulseRange = new(0f, 4f);
+        [SerializeField] private float maxUpwardVelocity = 25f;
 
         private float _runStartTime;
 
@@ -75,36 +83,63 @@ namespace OpenNinja
             }
         }
 
-        private void SpawnOne(float elapsed)
+        /// <summary>Picks a material by weight at the current elapsed time. Public for tests.</summary>
+        public CubeMaterial PickMaterial(float elapsed)
         {
-            if (spawnLineLeft == null || spawnLineRight == null) return;
+            if (entries == null || entries.Count == 0) return null;
 
-            float dangerP = Mathf.Clamp01(dangerProbabilityOverTime.Evaluate(elapsed));
-            Cube prefab = ChoosePrefab(dangerP);
-            if (prefab == null) return;
-
-            float x = Random.Range(spawnLineLeft.position.x, spawnLineRight.position.x);
-            Vector3 pos = new Vector3(x, spawnLineLeft.position.y, spawnLineLeft.position.z);
-            Quaternion rot = Random.rotation;
-
-            Cube cube = Instantiate(prefab, pos, rot);
-            Rigidbody rb = cube.GetComponent<Rigidbody>();
-            if (rb != null)
+            float total = 0f;
+            for (int i = 0; i < entries.Count; i++)
             {
-                float side = Random.Range(sideImpulseRange.x, sideImpulseRange.y);
-                side *= Random.value < 0.5f ? -1f : 1f;
-                float up = Random.Range(launchImpulseRange.x, launchImpulseRange.y);
-                rb.AddForce(new Vector3(side, up, 0f), ForceMode.Impulse);
+                if (entries[i].material == null) continue;
+                float w = Mathf.Max(0f, entries[i].weightOverTime?.Evaluate(elapsed) ?? 0f);
+                total += w;
             }
+            if (total <= 0f) return entries[0].material;
+
+            float roll = UnityEngine.Random.value * total;
+            float running = 0f;
+            for (int i = 0; i < entries.Count; i++)
+            {
+                if (entries[i].material == null) continue;
+                float w = Mathf.Max(0f, entries[i].weightOverTime?.Evaluate(elapsed) ?? 0f);
+                running += w;
+                if (roll <= running) return entries[i].material;
+            }
+            return entries[entries.Count - 1].material;
         }
 
-        private Cube ChoosePrefab(float dangerP)
+        private void SpawnOne(float elapsed)
         {
-            float roll = Random.value;
-            if (roll < dangerP) return blackPrefab;
-            float redP = redWeightOfNonDanger * (1f - dangerP);
-            if (roll < dangerP + redP) return redPrefab;
-            return greenPrefab;
+            if (cubePrefab == null || spawnLineLeft == null || spawnLineRight == null) return;
+            CubeMaterial material = PickMaterial(elapsed);
+            if (material == null) return;
+
+            float x = UnityEngine.Random.Range(spawnLineLeft.position.x, spawnLineRight.position.x);
+            Vector3 pos = new Vector3(x, spawnLineLeft.position.y, spawnLineLeft.position.z);
+            Quaternion rot = UnityEngine.Random.rotation;
+
+            Cube cube = Instantiate(cubePrefab, pos, rot);
+            cube.Initialize(material);
+
+            Rigidbody rb = cube.GetComponent<Rigidbody>();
+            if (rb == null) return;
+
+            Vector2 upRange = material.HasLaunchOverride ? material.launchImpulseOverride : launchImpulseRange;
+            float up = UnityEngine.Random.Range(upRange.x, upRange.y);
+            float side = UnityEngine.Random.Range(sideImpulseRange.x, sideImpulseRange.y);
+            side *= UnityEngine.Random.value < 0.5f ? -1f : 1f;
+            rb.AddForce(new Vector3(side, up, 0f), ForceMode.Impulse);
+
+            // Cap upward velocity so lightest cubes don't escape the play area instantly.
+            if (rb.linearVelocity.y > maxUpwardVelocity)
+                rb.linearVelocity = new Vector3(rb.linearVelocity.x, maxUpwardVelocity, rb.linearVelocity.z);
+        }
+
+        /// <summary>EditMode tests use this to inject a synthetic entries list.</summary>
+        public void SetEntriesForTest(List<MaterialEntry> testEntries)
+        {
+            entries = testEntries;
         }
     }
 }

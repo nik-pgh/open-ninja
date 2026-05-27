@@ -61,14 +61,10 @@ namespace OpenNinja.EditorSetup
             spawnRight.transform.SetParent(spawnerGO.transform, false);
             spawnRight.transform.position = new Vector3(7f, -6f, 0f);
 
-            var greenPrefab = AssetDatabase.LoadAssetAtPath<Cube>("Assets/Prefabs/Cube_Green.prefab");
-            var redPrefab = AssetDatabase.LoadAssetAtPath<Cube>("Assets/Prefabs/Cube_Red.prefab");
-            var blackPrefab = AssetDatabase.LoadAssetAtPath<Cube>("Assets/Prefabs/Cube_Black.prefab");
+            var cubePrefab = AssetDatabase.LoadAssetAtPath<Cube>("Assets/Prefabs/Cube.prefab");
 
             var spawnerSO = new SerializedObject(spawner);
-            SetRef(spawnerSO, "greenPrefab", greenPrefab);
-            SetRef(spawnerSO, "redPrefab", redPrefab);
-            SetRef(spawnerSO, "blackPrefab", blackPrefab);
+            SetRef(spawnerSO, "cubePrefab", cubePrefab);
             SetRef(spawnerSO, "spawnLineLeft", spawnLeft.transform);
             SetRef(spawnerSO, "spawnLineRight", spawnRight.transform);
             spawnerSO.ApplyModifiedPropertiesWithoutUndo();
