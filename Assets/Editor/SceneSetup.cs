@@ -3,6 +3,7 @@ using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -23,14 +24,33 @@ namespace OpenNinja.EditorSetup
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
             scene.name = "MainScene";
 
+            // ---- Skybox & ambient ----
+            var skyMat = CreateProceduralSky();
+            RenderSettings.skybox = skyMat;
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Skybox;
+            DynamicGI.UpdateEnvironment();
+            log.Add("skybox + ambient set");
+
             // ---- Camera ----
             var cam = Camera.main;
             cam.transform.position = new Vector3(0f, 4f, -12f);
             cam.transform.rotation = Quaternion.Euler(20f, 0f, 0f);
             cam.fieldOfView = 60f;
-            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.clearFlags = CameraClearFlags.Skybox;
             cam.backgroundColor = new Color(0.06f, 0.06f, 0.12f, 1f);
             log.Add("camera positioned");
+
+            // ---- Tune the directional light ----
+            var dirLight = Object.FindFirstObjectByType<Light>();
+            if (dirLight != null && dirLight.type == LightType.Directional)
+            {
+                dirLight.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+                dirLight.color = new Color(1.0f, 0.95f, 0.85f);
+                dirLight.intensity = 1.0f;
+                dirLight.shadows = LightShadows.Soft;
+                dirLight.shadowStrength = 0.6f;
+                log.Add("directional light tuned");
+            }
 
             // ---- KillZone ----
             var killZone = new GameObject("KillZone");
@@ -60,6 +80,18 @@ namespace OpenNinja.EditorSetup
                 fullSize: new Vector3(20f, 1f, 4f),  segmentCount: 12, pm: pm);
 
             log.Add("walls built");
+
+            // ---- Reflection probe ----
+            var probeGO = new GameObject("ReflectionProbe");
+            probeGO.transform.SetParent(systems.transform, false);
+            probeGO.transform.position = Vector3.zero;
+            var probe = probeGO.AddComponent<ReflectionProbe>();
+            probe.size = new Vector3(25f, 20f, 10f);
+            probe.mode = UnityEngine.Rendering.ReflectionProbeMode.Baked;
+            probe.resolution = 128;
+            probe.importance = 1;
+            probe.boxProjection = false;
+            log.Add("reflection probe added");
 
             var gmGO = new GameObject("GameManager");
             gmGO.transform.SetParent(systems.transform, false);
@@ -356,8 +388,44 @@ namespace OpenNinja.EditorSetup
                 EditorBuildSettings.scenes = buildScenes.ToArray();
             }
 
+            // ---- Bake reflection probe ----
+            // Re-fetch the probe from the saved scene; the local reference may have been
+            // invalidated by the scene save.
+            var bakedProbe = Object.FindFirstObjectByType<ReflectionProbe>();
+            if (bakedProbe != null)
+            {
+                string probePath = "Assets/Scenes/MainScene/ReflectionProbe-0.exr";
+                var probeDir = System.IO.Path.GetDirectoryName(probePath);
+                if (!AssetDatabase.IsValidFolder(probeDir))
+                {
+                    AssetDatabase.CreateFolder(
+                        System.IO.Path.GetDirectoryName(probeDir),
+                        System.IO.Path.GetFileName(probeDir));
+                }
+                Lightmapping.BakeReflectionProbe(bakedProbe, probePath);
+                log.Add("reflection probe baked");
+            }
+
             log.Add($"scene saved to {scenePath}");
             return string.Join(" | ", log);
+        }
+
+        private static Material CreateProceduralSky()
+        {
+            const string path = "Assets/Materials/ProceduralSky.mat";
+            var sky = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (sky == null)
+            {
+                sky = new Material(Shader.Find("Skybox/Procedural"));
+                AssetDatabase.CreateAsset(sky, path);
+            }
+            sky.SetFloat("_SunDisk", 2);                                       // small sun disk
+            sky.SetFloat("_AtmosphereThickness", 0.9f);                        // slight haze
+            sky.SetColor("_SkyTint", new Color(0.5f, 0.7f, 0.95f, 1f));
+            sky.SetColor("_GroundColor", new Color(0.2f, 0.18f, 0.16f, 1f));
+            sky.SetFloat("_Exposure", 1.0f);
+            EditorUtility.SetDirty(sky);
+            return sky;
         }
 
         private static void WireEntry(SerializedProperty arr, int index, string materialName, AnimationCurve curve)
