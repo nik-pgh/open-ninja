@@ -180,7 +180,11 @@ namespace OpenNinja.EditorSetup
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             var scaler = canvasGO.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
+            // Portrait reference resolution (1080×1920) so UI elements scale
+            // sensibly on the 9:16 viewport. matchWidthOrHeight = 0.5 averages
+            // width/height scaling so neither axis dominates.
+            scaler.referenceResolution = new Vector2(1080, 1920);
+            scaler.matchWidthOrHeight = 0.5f;
 
             // EventSystem.
             if (Object.FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>() == null)
