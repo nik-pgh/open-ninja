@@ -17,9 +17,14 @@ namespace OpenNinja.EditorSetup
     /// </summary>
     public static class StartScreenAssetsSetup
     {
-        // Stable mirror of Google Fonts OFL repo.
+        // Static Caveat-Bold.ttf from Google's fonts CDN (resolved once via the
+        // Google Fonts CSS API — `https://fonts.googleapis.com/css2?family=Caveat:wght@700`
+        // tells you the actual gstatic URL). The variable Caveat[wght].ttf produces
+        // mangled glyphs when TMP bakes an SDF, so we deliberately use the static
+        // bold weight. The file is committed to Assets/Fonts/; this URL is the
+        // recovery path if it ever needs re-fetching.
         private const string CaveatUrl =
-            "https://github.com/google/fonts/raw/main/ofl/caveat/Caveat%5Bwght%5D.ttf";
+            "https://fonts.gstatic.com/s/caveat/v23/WnznHAc5bAfYB2QRah7pcpNvOx-pjRV6SII.ttf";
 
         private const string FontsDir    = "Assets/Fonts";
         private const string TexturesDir = "Assets/Textures";
@@ -78,19 +83,82 @@ namespace OpenNinja.EditorSetup
                 return "sdf: skipped (no ttf)";
             }
 
+            // SDF bake params chosen for legibility of Caveat at 36–144pt display:
+            //   samplingPointSize 128 — must be ≥ largest display size or the
+            //     SDF gradient can't stretch far enough and glyphs render as
+            //     solid silhouettes
+            //   atlasPadding 20      — Caveat has long horizontal swash tails;
+            //     padding also widens the alpha gradient on each glyph
+            //   2048×2048 atlas      — needed to fit the full preload set at
+            //     the higher sample size
+            //   multi-atlas off      — single page avoids page-selection bugs
+            //   dynamic population   — required so TryAddCharacters can fill
+            //     the atlas
+            const int samplingPointSize = 128;
+            const int atlasPadding      = 20;
+            const int atlasSize         = 2048;
+
             var sdf = TMP_FontAsset.CreateFontAsset(
                 font,
-                samplingPointSize: 90,
-                atlasPadding: 9,
+                samplingPointSize: samplingPointSize,
+                atlasPadding: atlasPadding,
                 renderMode: GlyphRenderMode.SDFAA,
-                atlasWidth: 1024,
-                atlasHeight: 1024,
+                atlasWidth: atlasSize,
+                atlasHeight: atlasSize,
                 atlasPopulationMode: AtlasPopulationMode.Dynamic,
-                enableMultiAtlasSupport: true);
+                enableMultiAtlasSupport: false);
 
             AssetDatabase.CreateAsset(sdf, LabNotebookTheme.FontAssetPath);
-            sdf.TryAddCharacters("★↗—♥−", out _);
+
+            // The atlas Texture2D that CreateFontAsset allocated lives only in
+            // memory; we have to persist it as a sub-asset BEFORE rasterising
+            // glyphs into it, otherwise SaveAssets discards the freshly-baked
+            // pixel data along with the unsaved texture.
+            var atlasTex = sdf.atlasTexture;
+            if (atlasTex != null && string.IsNullOrEmpty(AssetDatabase.GetAssetPath(atlasTex)))
+            {
+                atlasTex.name = $"{sdf.name} Atlas";
+                AssetDatabase.AddObjectToAsset(atlasTex, sdf);
+            }
+
+            // TMP_FontAsset.CreateFontAsset does NOT create a default material —
+            // without one, TMP can't sample the SDF atlas and renders garbage at
+            // runtime. Build the material manually and store it as a sub-asset.
+            var distanceFieldShader = Shader.Find("TextMeshPro/Distance Field");
+            var mat = new Material(distanceFieldShader) { name = sdf.name + " Material" };
+            mat.SetTexture(ShaderUtilities.ID_MainTex, sdf.atlasTexture);
+            mat.SetFloat(ShaderUtilities.ID_TextureWidth, sdf.atlasWidth);
+            mat.SetFloat(ShaderUtilities.ID_TextureHeight, sdf.atlasHeight);
+            mat.SetFloat(ShaderUtilities.ID_GradientScale, sdf.atlasPadding + 1);
+            mat.SetFloat(ShaderUtilities.ID_WeightNormal, sdf.normalStyle);
+            mat.SetFloat(ShaderUtilities.ID_WeightBold,   sdf.boldStyle);
+            sdf.material = mat;
+            AssetDatabase.AddObjectToAsset(mat, sdf);
+
+            // Pre-populate every character we'll display via TMP's high-level
+            // API. TryAddCharacters allocates glyph rects AND rasterises the
+            // SDF pixels into the atlas — provided the atlas texture is
+            // already saved as a sub-asset (which we did above).
+            const string preload =
+                " !\"#$%&'()*+,-./0123456789:;<=>?@" +
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
+                "abcdefghijklmnopqrstuvwxyz" +
+                "[\\]^_`{|}~" +
+                "★↗—♥−×";
+            sdf.TryAddCharacters(preload, out string missing);
+            if (!string.IsNullOrEmpty(missing))
+                Debug.LogWarning($"Caveat SDF: missing glyphs for '{missing}'");
+
+            // Force the atlas texture to commit its pixel data and persist with
+            // the asset. Without Apply() the rasterised SDF may live only in
+            // the GPU-side copy.
+            if (sdf.atlasTexture != null) sdf.atlasTexture.Apply(false, false);
+
             EditorUtility.SetDirty(sdf);
+            EditorUtility.SetDirty(mat);
+            if (sdf.atlasTexture != null) EditorUtility.SetDirty(sdf.atlasTexture);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset(LabNotebookTheme.FontAssetPath);
             return "sdf: generated";
         }
 
