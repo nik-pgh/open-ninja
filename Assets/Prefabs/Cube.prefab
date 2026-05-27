@@ -154,4 +154,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: OpenNinja::OpenNinja.Cube
   material: {fileID: 0}
-  burstPrefab: {fileID: 0}
+  burstPrefab: {fileID: 598646406492050960, guid: 3801cff390dd44bd085d1289b56ad2d2, type: 3}

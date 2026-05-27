@@ -21,7 +21,7 @@ namespace OpenNinja.EditorSetup
 
             // ---- Fresh scene ----
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
-            scene.name = "SampleScene";
+            scene.name = "MainScene";
 
             // ---- Camera ----
             var cam = Camera.main;
@@ -43,6 +43,23 @@ namespace OpenNinja.EditorSetup
 
             // ---- Systems root ----
             var systems = new GameObject("Systems");
+
+            // ---- Walls (bumpy) ----
+            var walls = new GameObject("Walls");
+            walls.transform.SetParent(systems.transform, false);
+
+            var pm = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>("Assets/Data/BouncyWall.physicMaterial");
+            BuildWall(walls.transform, "Wall_Left",  position: new Vector3(-10f, 0f, 0f),
+                rotation: Quaternion.identity,
+                fullSize: new Vector3(1f, 20f, 4f),  segmentCount: 12, pm: pm);
+            BuildWall(walls.transform, "Wall_Right", position: new Vector3(10f, 0f, 0f),
+                rotation: Quaternion.identity,
+                fullSize: new Vector3(1f, 20f, 4f),  segmentCount: 12, pm: pm);
+            BuildWall(walls.transform, "Wall_Top",   position: new Vector3(0f, 8f, 0f),
+                rotation: Quaternion.identity,
+                fullSize: new Vector3(20f, 1f, 4f),  segmentCount: 12, pm: pm);
+
+            log.Add("walls built");
 
             var gmGO = new GameObject("GameManager");
             gmGO.transform.SetParent(systems.transform, false);
@@ -67,6 +84,17 @@ namespace OpenNinja.EditorSetup
             SetRef(spawnerSO, "cubePrefab", cubePrefab);
             SetRef(spawnerSO, "spawnLineLeft", spawnLeft.transform);
             SetRef(spawnerSO, "spawnLineRight", spawnRight.transform);
+
+            // Build the MaterialEntry list. Curves shift the mix over time.
+            // Early game: lots of Wood/Stone; later game: more Metal/Crystal/Spiked/Rubber.
+            var entriesProp = spawnerSO.FindProperty("entries");
+            entriesProp.arraySize = 6;
+            WireEntry(entriesProp, 0, "Wood",    AnimationCurve.Linear(0, 4f, 60, 2f));
+            WireEntry(entriesProp, 1, "Stone",   AnimationCurve.Linear(0, 3f, 60, 3f));
+            WireEntry(entriesProp, 2, "Metal",   AnimationCurve.Linear(0, 0.5f, 60, 1.5f));
+            WireEntry(entriesProp, 3, "Crystal", AnimationCurve.Linear(0, 0.25f, 60, 1f));
+            WireEntry(entriesProp, 4, "Spiked",  AnimationCurve.Linear(0, 0.5f, 60, 1.5f));
+            WireEntry(entriesProp, 5, "Rubber",  AnimationCurve.Linear(0, 0.5f, 60, 1f));
             spawnerSO.ApplyModifiedPropertiesWithoutUndo();
             log.Add("spawner wired");
 
@@ -301,8 +329,24 @@ namespace OpenNinja.EditorSetup
             goSO.ApplyModifiedPropertiesWithoutUndo();
             panel.SetActive(false);
 
+            // Wire the slice burst prefab into the unified Cube prefab.
+            var cubePrefabAsset = AssetDatabase.LoadAssetAtPath<Cube>("Assets/Prefabs/Cube.prefab");
+            var burstPrefab = AssetDatabase.LoadAssetAtPath<ParticleSystem>("Assets/Prefabs/SliceBurst.prefab");
+            if (cubePrefabAsset != null && burstPrefab != null)
+            {
+                var prefabSO = new SerializedObject(cubePrefabAsset);
+                var burstProp = prefabSO.FindProperty("burstPrefab");
+                if (burstProp != null)
+                {
+                    burstProp.objectReferenceValue = burstPrefab;
+                    prefabSO.ApplyModifiedPropertiesWithoutUndo();
+                    EditorUtility.SetDirty(cubePrefabAsset);
+                    AssetDatabase.SaveAssets();
+                }
+            }
+
             // ---- Save scene + add to build settings ----
-            const string scenePath = "Assets/Scenes/SampleScene.unity";
+            const string scenePath = "Assets/Scenes/MainScene.unity";
             EditorSceneManager.SaveScene(scene, scenePath);
 
             var buildScenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
@@ -314,6 +358,67 @@ namespace OpenNinja.EditorSetup
 
             log.Add($"scene saved to {scenePath}");
             return string.Join(" | ", log);
+        }
+
+        private static void WireEntry(SerializedProperty arr, int index, string materialName, AnimationCurve curve)
+        {
+            var entry = arr.GetArrayElementAtIndex(index);
+            string path = $"Assets/Data/CubeMaterials/{materialName}.asset";
+            var so = AssetDatabase.LoadAssetAtPath<CubeMaterial>(path);
+            entry.FindPropertyRelative("material").objectReferenceValue = so;
+            entry.FindPropertyRelative("weightOverTime").animationCurveValue = curve;
+        }
+
+        /// <summary>
+        /// Builds a wall composed of `segmentCount` BoxCollider children, each tilted by
+        /// a random angle in [-8, +8] degrees around the wall's local Z axis so that
+        /// reflections vary segment to segment.
+        /// </summary>
+        private static void BuildWall(Transform parent, string name, Vector3 position,
+            Quaternion rotation, Vector3 fullSize, int segmentCount, PhysicsMaterial pm)
+        {
+            var wall = new GameObject(name);
+            wall.transform.SetParent(parent, false);
+            wall.transform.SetPositionAndRotation(position, rotation);
+            wall.tag = "Wall";
+
+            // Visible mesh: one stretched cube. Cosmetic only.
+            var visualGO = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            visualGO.name = "Visual";
+            Object.DestroyImmediate(visualGO.GetComponent<Collider>()); // collider is on segments
+            visualGO.transform.SetParent(wall.transform, false);
+            visualGO.transform.localScale = fullSize;
+            var mr = visualGO.GetComponent<MeshRenderer>();
+            if (mr != null) mr.enabled = true;
+
+            // Segment colliders.
+            bool isHorizontal = fullSize.x > fullSize.y;
+            float length = isHorizontal ? fullSize.x : fullSize.y;
+            float segmentLength = length / segmentCount;
+            var rng = new System.Random(name.GetHashCode());
+
+            for (int i = 0; i < segmentCount; i++)
+            {
+                var seg = new GameObject($"Seg_{i}", typeof(BoxCollider));
+                seg.transform.SetParent(wall.transform, false);
+                seg.tag = "Wall";
+
+                float t = (i + 0.5f) / segmentCount; // [0,1) centers
+                float localOffset = Mathf.Lerp(-length * 0.5f, length * 0.5f, t);
+                Vector3 localPos = isHorizontal
+                    ? new Vector3(localOffset, 0f, 0f)
+                    : new Vector3(0f, localOffset, 0f);
+
+                float angleDeg = (float)(rng.NextDouble() * 16.0 - 8.0); // [-8, +8]
+                seg.transform.localPosition = localPos;
+                seg.transform.localRotation = Quaternion.Euler(0f, 0f, angleDeg);
+
+                var col = seg.GetComponent<BoxCollider>();
+                col.size = isHorizontal
+                    ? new Vector3(segmentLength * 1.05f, fullSize.y, fullSize.z)
+                    : new Vector3(fullSize.x, segmentLength * 1.05f, fullSize.z);
+                if (pm != null) col.material = pm;
+            }
         }
 
         private static void SetRef(SerializedObject so, string name, Object obj)
