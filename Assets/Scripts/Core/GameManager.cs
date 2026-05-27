@@ -62,11 +62,10 @@ namespace OpenNinja
 
         // ---- Public mutators ----
 
-        public void RegisterHit(CubeType type, Vector3 worldPos)
+        public void RegisterHit(int basePoints, Vector3 worldPos)
         {
             if (IsGameOver) return;
 
-            int basePoints = BasePointsFor(type);
             int awardedMult = ComboMultiplier;
             int awardedPoints = basePoints * awardedMult;
 
@@ -148,12 +147,6 @@ namespace OpenNinja
             OnGameOver?.Invoke(Score);
         }
 
-        private static int BasePointsFor(CubeType type) => type switch
-        {
-            CubeType.Green => 1,
-            CubeType.Red => 2,
-            CubeType.Black => 0,
-            _ => 0
-        };
+
     }
 }

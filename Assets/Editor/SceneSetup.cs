@@ -3,6 +3,7 @@ using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -21,16 +22,35 @@ namespace OpenNinja.EditorSetup
 
             // ---- Fresh scene ----
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
-            scene.name = "SampleScene";
+            scene.name = "MainScene";
+
+            // ---- Skybox & ambient ----
+            var skyMat = CreateProceduralSky();
+            RenderSettings.skybox = skyMat;
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Skybox;
+            DynamicGI.UpdateEnvironment();
+            log.Add("skybox + ambient set");
 
             // ---- Camera ----
             var cam = Camera.main;
             cam.transform.position = new Vector3(0f, 4f, -12f);
             cam.transform.rotation = Quaternion.Euler(20f, 0f, 0f);
             cam.fieldOfView = 60f;
-            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.clearFlags = CameraClearFlags.Skybox;
             cam.backgroundColor = new Color(0.06f, 0.06f, 0.12f, 1f);
             log.Add("camera positioned");
+
+            // ---- Tune the directional light ----
+            var dirLight = Object.FindFirstObjectByType<Light>();
+            if (dirLight != null && dirLight.type == LightType.Directional)
+            {
+                dirLight.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+                dirLight.color = new Color(1.0f, 0.95f, 0.85f);
+                dirLight.intensity = 1.0f;
+                dirLight.shadows = LightShadows.Soft;
+                dirLight.shadowStrength = 0.6f;
+                log.Add("directional light tuned");
+            }
 
             // ---- KillZone ----
             var killZone = new GameObject("KillZone");
@@ -43,6 +63,35 @@ namespace OpenNinja.EditorSetup
 
             // ---- Systems root ----
             var systems = new GameObject("Systems");
+
+            // ---- Walls (bumpy) ----
+            var walls = new GameObject("Walls");
+            walls.transform.SetParent(systems.transform, false);
+
+            var pm = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>("Assets/Data/BouncyWall.physicMaterial");
+            BuildWall(walls.transform, "Wall_Left",  position: new Vector3(-10f, 0f, 0f),
+                rotation: Quaternion.identity,
+                fullSize: new Vector3(1f, 20f, 4f),  segmentCount: 12, pm: pm);
+            BuildWall(walls.transform, "Wall_Right", position: new Vector3(10f, 0f, 0f),
+                rotation: Quaternion.identity,
+                fullSize: new Vector3(1f, 20f, 4f),  segmentCount: 12, pm: pm);
+            BuildWall(walls.transform, "Wall_Top",   position: new Vector3(0f, 8f, 0f),
+                rotation: Quaternion.identity,
+                fullSize: new Vector3(20f, 1f, 4f),  segmentCount: 12, pm: pm);
+
+            log.Add("walls built");
+
+            // ---- Reflection probe ----
+            var probeGO = new GameObject("ReflectionProbe");
+            probeGO.transform.SetParent(systems.transform, false);
+            probeGO.transform.position = Vector3.zero;
+            var probe = probeGO.AddComponent<ReflectionProbe>();
+            probe.size = new Vector3(25f, 20f, 10f);
+            probe.mode = UnityEngine.Rendering.ReflectionProbeMode.Baked;
+            probe.resolution = 128;
+            probe.importance = 1;
+            probe.boxProjection = false;
+            log.Add("reflection probe added");
 
             var gmGO = new GameObject("GameManager");
             gmGO.transform.SetParent(systems.transform, false);
@@ -61,16 +110,23 @@ namespace OpenNinja.EditorSetup
             spawnRight.transform.SetParent(spawnerGO.transform, false);
             spawnRight.transform.position = new Vector3(7f, -6f, 0f);
 
-            var greenPrefab = AssetDatabase.LoadAssetAtPath<Cube>("Assets/Prefabs/Cube_Green.prefab");
-            var redPrefab = AssetDatabase.LoadAssetAtPath<Cube>("Assets/Prefabs/Cube_Red.prefab");
-            var blackPrefab = AssetDatabase.LoadAssetAtPath<Cube>("Assets/Prefabs/Cube_Black.prefab");
+            var cubePrefab = AssetDatabase.LoadAssetAtPath<Cube>("Assets/Prefabs/Cube.prefab");
 
             var spawnerSO = new SerializedObject(spawner);
-            SetRef(spawnerSO, "greenPrefab", greenPrefab);
-            SetRef(spawnerSO, "redPrefab", redPrefab);
-            SetRef(spawnerSO, "blackPrefab", blackPrefab);
+            SetRef(spawnerSO, "cubePrefab", cubePrefab);
             SetRef(spawnerSO, "spawnLineLeft", spawnLeft.transform);
             SetRef(spawnerSO, "spawnLineRight", spawnRight.transform);
+
+            // Build the MaterialEntry list. Curves shift the mix over time.
+            // Early game: lots of Wood/Stone; later game: more Metal/Crystal/Spiked/Rubber.
+            var entriesProp = spawnerSO.FindProperty("entries");
+            entriesProp.arraySize = 6;
+            WireEntry(entriesProp, 0, "Wood",    AnimationCurve.Linear(0, 4f, 60, 2f));
+            WireEntry(entriesProp, 1, "Stone",   AnimationCurve.Linear(0, 3f, 60, 3f));
+            WireEntry(entriesProp, 2, "Metal",   AnimationCurve.Linear(0, 0.5f, 60, 1.5f));
+            WireEntry(entriesProp, 3, "Crystal", AnimationCurve.Linear(0, 0.25f, 60, 1f));
+            WireEntry(entriesProp, 4, "Spiked",  AnimationCurve.Linear(0, 0.5f, 60, 1.5f));
+            WireEntry(entriesProp, 5, "Rubber",  AnimationCurve.Linear(0, 0.5f, 60, 1f));
             spawnerSO.ApplyModifiedPropertiesWithoutUndo();
             log.Add("spawner wired");
 
@@ -305,8 +361,24 @@ namespace OpenNinja.EditorSetup
             goSO.ApplyModifiedPropertiesWithoutUndo();
             panel.SetActive(false);
 
+            // Wire the slice burst prefab into the unified Cube prefab.
+            var cubePrefabAsset = AssetDatabase.LoadAssetAtPath<Cube>("Assets/Prefabs/Cube.prefab");
+            var burstPrefab = AssetDatabase.LoadAssetAtPath<ParticleSystem>("Assets/Prefabs/SliceBurst.prefab");
+            if (cubePrefabAsset != null && burstPrefab != null)
+            {
+                var prefabSO = new SerializedObject(cubePrefabAsset);
+                var burstProp = prefabSO.FindProperty("burstPrefab");
+                if (burstProp != null)
+                {
+                    burstProp.objectReferenceValue = burstPrefab;
+                    prefabSO.ApplyModifiedPropertiesWithoutUndo();
+                    EditorUtility.SetDirty(cubePrefabAsset);
+                    AssetDatabase.SaveAssets();
+                }
+            }
+
             // ---- Save scene + add to build settings ----
-            const string scenePath = "Assets/Scenes/SampleScene.unity";
+            const string scenePath = "Assets/Scenes/MainScene.unity";
             EditorSceneManager.SaveScene(scene, scenePath);
 
             var buildScenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
@@ -316,8 +388,107 @@ namespace OpenNinja.EditorSetup
                 EditorBuildSettings.scenes = buildScenes.ToArray();
             }
 
+            // ---- Bake reflection probe ----
+            // Re-fetch the probe from the saved scene; the local reference may have been
+            // invalidated by the scene save.
+            var bakedProbe = Object.FindFirstObjectByType<ReflectionProbe>();
+            if (bakedProbe != null)
+            {
+                string probePath = "Assets/Scenes/MainScene/ReflectionProbe-0.exr";
+                var probeDir = System.IO.Path.GetDirectoryName(probePath);
+                if (!AssetDatabase.IsValidFolder(probeDir))
+                {
+                    AssetDatabase.CreateFolder(
+                        System.IO.Path.GetDirectoryName(probeDir),
+                        System.IO.Path.GetFileName(probeDir));
+                }
+                Lightmapping.BakeReflectionProbe(bakedProbe, probePath);
+                log.Add("reflection probe baked");
+            }
+
             log.Add($"scene saved to {scenePath}");
             return string.Join(" | ", log);
+        }
+
+        private static Material CreateProceduralSky()
+        {
+            const string path = "Assets/Materials/ProceduralSky.mat";
+            var sky = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (sky == null)
+            {
+                sky = new Material(Shader.Find("Skybox/Procedural"));
+                AssetDatabase.CreateAsset(sky, path);
+            }
+            sky.SetFloat("_SunDisk", 2);                                       // small sun disk
+            sky.SetFloat("_AtmosphereThickness", 0.9f);                        // slight haze
+            sky.SetColor("_SkyTint", new Color(0.5f, 0.7f, 0.95f, 1f));
+            sky.SetColor("_GroundColor", new Color(0.2f, 0.18f, 0.16f, 1f));
+            sky.SetFloat("_Exposure", 1.0f);
+            EditorUtility.SetDirty(sky);
+            return sky;
+        }
+
+        private static void WireEntry(SerializedProperty arr, int index, string materialName, AnimationCurve curve)
+        {
+            var entry = arr.GetArrayElementAtIndex(index);
+            string path = $"Assets/Data/CubeMaterials/{materialName}.asset";
+            var so = AssetDatabase.LoadAssetAtPath<CubeMaterial>(path);
+            entry.FindPropertyRelative("material").objectReferenceValue = so;
+            entry.FindPropertyRelative("weightOverTime").animationCurveValue = curve;
+        }
+
+        /// <summary>
+        /// Builds a wall composed of `segmentCount` BoxCollider children, each tilted by
+        /// a random angle in [-8, +8] degrees around the wall's local Z axis so that
+        /// reflections vary segment to segment.
+        /// </summary>
+        private static void BuildWall(Transform parent, string name, Vector3 position,
+            Quaternion rotation, Vector3 fullSize, int segmentCount, PhysicsMaterial pm)
+        {
+            var wall = new GameObject(name);
+            wall.transform.SetParent(parent, false);
+            wall.transform.SetPositionAndRotation(position, rotation);
+            wall.tag = "Wall";
+
+            // Visible mesh: one stretched cube. Cosmetic only.
+            var visualGO = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            visualGO.name = "Visual";
+            Object.DestroyImmediate(visualGO.GetComponent<Collider>()); // collider is on segments
+            visualGO.transform.SetParent(wall.transform, false);
+            visualGO.transform.localScale = fullSize;
+            // Walls are physics-only. Hide the visual; the player should see cubes
+            // bounce against an invisible boundary, not a tilted slab at the edge of view.
+            var mr = visualGO.GetComponent<MeshRenderer>();
+            if (mr != null) mr.enabled = false;
+
+            // Segment colliders.
+            bool isHorizontal = fullSize.x > fullSize.y;
+            float length = isHorizontal ? fullSize.x : fullSize.y;
+            float segmentLength = length / segmentCount;
+            var rng = new System.Random(name.GetHashCode());
+
+            for (int i = 0; i < segmentCount; i++)
+            {
+                var seg = new GameObject($"Seg_{i}", typeof(BoxCollider));
+                seg.transform.SetParent(wall.transform, false);
+                seg.tag = "Wall";
+
+                float t = (i + 0.5f) / segmentCount; // [0,1) centers
+                float localOffset = Mathf.Lerp(-length * 0.5f, length * 0.5f, t);
+                Vector3 localPos = isHorizontal
+                    ? new Vector3(localOffset, 0f, 0f)
+                    : new Vector3(0f, localOffset, 0f);
+
+                float angleDeg = (float)(rng.NextDouble() * 16.0 - 8.0); // [-8, +8]
+                seg.transform.localPosition = localPos;
+                seg.transform.localRotation = Quaternion.Euler(0f, 0f, angleDeg);
+
+                var col = seg.GetComponent<BoxCollider>();
+                col.size = isHorizontal
+                    ? new Vector3(segmentLength * 1.05f, fullSize.y, fullSize.z)
+                    : new Vector3(fullSize.x, segmentLength * 1.05f, fullSize.z);
+                if (pm != null) col.material = pm;
+            }
         }
 
         private static void SetRef(SerializedObject so, string name, Object obj)

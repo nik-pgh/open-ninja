@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 40278d332c0bf44bc89ced26c1c6da45, type: 3}
+  m_Name: Metal
+  m_EditorClassIdentifier: OpenNinja::OpenNinja.CubeMaterial
+  displayName: Metal
+  role: 1
+  basePoints: 3
+  mass: 3
+  displayScale: 2
+  bouncinessMultiplier: 0.9
+  launchImpulseOverride: {x: 10, y: 14}
+  renderMaterial: {fileID: 2100000, guid: cf9620e02ff3146a7b6fff8f86a0e47a, type: 2}
+  burstTint: {r: 0.5, g: 0.55, b: 0.6, a: 1}
+  impactClip: {fileID: 0}
+  audioPitchAtMassOne: 1
+  audioVolume: 0.7
