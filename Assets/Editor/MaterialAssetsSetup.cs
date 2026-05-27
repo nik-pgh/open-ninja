@@ -63,9 +63,11 @@ namespace OpenNinja.EditorSetup
             MakeCubeMaterial("Stone",   role: CubeRole.Normal, basePts: 2, mass: 1.0f, scale: 1.5f,
                 renderMat: stoneMat,   burst: new Color(0.7f, 0.7f, 0.7f, 1f),
                 bounceMult: 1.0f, launchOverride: Vector2.zero);
+            // Metal is heavy (mass 3); needs a bigger impulse to actually arc up
+            // into view from the spawn line at y=-6. With v=18 → peak ≈ y=-1.
             MakeCubeMaterial("Metal",   role: CubeRole.Bonus,  basePts: 3, mass: 3.0f, scale: 2.0f,
                 renderMat: metalMat,   burst: new Color(0.5f, 0.55f, 0.6f, 1f),
-                bounceMult: 0.9f, launchOverride: new Vector2(10f, 14f));
+                bounceMult: 0.9f, launchOverride: new Vector2(15f, 20f));
             MakeCubeMaterial("Crystal", role: CubeRole.Bonus,  basePts: 5, mass: 0.3f, scale: 1.35f,
                 renderMat: crystalMat, burst: new Color(0.7f, 0.95f, 1f, 1f),
                 bounceMult: 1.0f, launchOverride: Vector2.zero);
