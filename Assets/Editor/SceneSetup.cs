@@ -18,6 +18,9 @@ namespace OpenNinja.EditorSetup
     {
         public static string Execute()
         {
+            StartScreenAssetsSetup.Execute();
+            RebuildComboPopupPrefab();
+
             var log = new List<string>();
 
             // ---- Fresh scene ----
@@ -198,123 +201,168 @@ namespace OpenNinja.EditorSetup
                 _ = es;
             }
 
-            // ScorePanel (TMP_Text in top-left).
-            var scoreGO = NewTMP(canvasGO.transform, "ScorePanel", "Score: 0", 48,
+            // ScorePanel — sticky note in top-left.
+            var scoreCard = BuildStickyNote(canvasGO.transform, "ScorePanel",
                 anchorMin: new Vector2(0, 1), anchorMax: new Vector2(0, 1), pivot: new Vector2(0, 1),
-                anchored: new Vector2(40, -40), size: new Vector2(400, 80),
-                color: Color.white, alignment: TextAlignmentOptions.TopLeft);
-            var scoreView = scoreGO.AddComponent<ScoreView>();
+                anchored: new Vector2(60, -60), size: new Vector2(280, 160),
+                rotationDeg: LabNotebookTheme.HudCardRotationLeft);
+
+            var scoreLabelGO = NewTMP(scoreCard, "Label", "SCORE",
+                LabNotebookTheme.HudLabelSize,
+                anchorMin: new Vector2(0, 1), anchorMax: new Vector2(1, 1), pivot: new Vector2(0.5f, 1),
+                anchored: new Vector2(0, -4), size: new Vector2(0, 30),
+                color: LabNotebookTheme.SubduedInk, alignment: TextAlignmentOptions.Center);
+            ApplyCaveat(scoreLabelGO);
+
+            var scoreValueGO = NewTMP(scoreCard, "Value", "0",
+                LabNotebookTheme.HudValueSize,
+                anchorMin: new Vector2(0, 0), anchorMax: new Vector2(1, 1), pivot: new Vector2(0.5f, 0.5f),
+                anchored: new Vector2(0, -16), size: new Vector2(0, 0),
+                color: LabNotebookTheme.InkDark, alignment: TextAlignmentOptions.Center);
+            ApplyCaveat(scoreValueGO);
+
+            var scoreView = scoreCard.gameObject.AddComponent<ScoreView>();
             var scoreSO = new SerializedObject(scoreView);
-            SetRef(scoreSO, "label", scoreGO.GetComponent<TMP_Text>());
+            SetRef(scoreSO, "label", scoreValueGO.GetComponent<TMP_Text>());
+            scoreSO.FindProperty("format").stringValue = "{0}";
             scoreSO.ApplyModifiedPropertiesWithoutUndo();
 
-            // NicknameHud (label under the score; reads PlayerSession.Nickname).
-            var nickGO = NewTMP(canvasGO.transform, "NicknameHud", "Player:", 36,
+            // NicknameHud — small note under the score card.
+            var nickCard = BuildStickyNote(canvasGO.transform, "NicknameHud",
                 anchorMin: new Vector2(0, 1), anchorMax: new Vector2(0, 1), pivot: new Vector2(0, 1),
-                anchored: new Vector2(40, -120), size: new Vector2(700, 60),
-                color: new Color(1f, 1f, 1f, 0.7f), alignment: TextAlignmentOptions.TopLeft);
-            var nickHud = nickGO.AddComponent<NicknameHud>();
-            var nickSO = new SerializedObject(nickHud);
-            SetRef(nickSO, "label", nickGO.GetComponent<TMP_Text>());
-            nickSO.ApplyModifiedPropertiesWithoutUndo();
+                anchored: new Vector2(60, -240), size: new Vector2(320, 70),
+                rotationDeg: LabNotebookTheme.HudCardRotationLeft);
 
-            // ComboBadge wrapper (always active, holds the script).
-            // Visual child is what gets toggled when the multiplier is 1.
-            var comboBadge = new GameObject("ComboBadge", typeof(RectTransform));
-            comboBadge.transform.SetParent(canvasGO.transform, false);
-            var cbRT = (RectTransform)comboBadge.transform;
-            cbRT.anchorMin = new Vector2(0.5f, 1f);
-            cbRT.anchorMax = new Vector2(0.5f, 1f);
-            cbRT.pivot = new Vector2(0.5f, 1f);
-            cbRT.anchoredPosition = new Vector2(0, -40);
-            cbRT.sizeDelta = new Vector2(400, 80);
-
-            var badgeVisual = new GameObject("Visual", typeof(RectTransform));
-            badgeVisual.transform.SetParent(comboBadge.transform, false);
-            var bvRT = (RectTransform)badgeVisual.transform;
-            bvRT.anchorMin = Vector2.zero;
-            bvRT.anchorMax = Vector2.one;
-            bvRT.offsetMin = Vector2.zero;
-            bvRT.offsetMax = Vector2.zero;
-
-            var badgeLabel = NewTMP(badgeVisual.transform, "Label", "Combo x2", 48,
+            var nickLabel = NewTMP(nickCard, "Label", "<color=#c83232>★</color> Player:",
+                LabNotebookTheme.HudNicknameSize,
                 anchorMin: Vector2.zero, anchorMax: Vector2.one, pivot: new Vector2(0.5f, 0.5f),
                 anchored: Vector2.zero, size: Vector2.zero,
-                color: new Color(1f, 0.85f, 0.2f, 1f), alignment: TextAlignmentOptions.Center);
+                color: LabNotebookTheme.InkDark, alignment: TextAlignmentOptions.MidlineLeft);
+            ApplyCaveat(nickLabel);
+            nickLabel.GetComponent<TMP_Text>().richText = true;
 
-            // Combo timer bar (drains as the window expires).
-            var timerBg = new GameObject("TimerBg", typeof(RectTransform), typeof(Image));
-            timerBg.transform.SetParent(badgeVisual.transform, false);
-            var tbRT = (RectTransform)timerBg.transform;
-            tbRT.anchorMin = new Vector2(0.1f, 0f);
-            tbRT.anchorMax = new Vector2(0.9f, 0f);
-            tbRT.pivot = new Vector2(0.5f, 0f);
-            tbRT.anchoredPosition = new Vector2(0, -4);
-            tbRT.sizeDelta = new Vector2(0, 8);
-            timerBg.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.15f);
+            var nickHud = nickCard.gameObject.AddComponent<NicknameHud>();
+            var nickSO = new SerializedObject(nickHud);
+            SetRef(nickSO, "label", nickLabel.GetComponent<TMP_Text>());
+            nickSO.FindProperty("format").stringValue = "<color=#c83232>★</color> Player: {0}";
+            nickSO.ApplyModifiedPropertiesWithoutUndo();
 
-            var timerFillGO = new GameObject("TimerFill", typeof(RectTransform), typeof(Image));
+            // ComboBadge wrapper — always active, holds the script.
+            var comboWrap = new GameObject("ComboBadge", typeof(RectTransform));
+            comboWrap.transform.SetParent(canvasGO.transform, false);
+            var cwrt = (RectTransform)comboWrap.transform;
+            cwrt.anchorMin = new Vector2(0.5f, 1f);
+            cwrt.anchorMax = new Vector2(0.5f, 1f);
+            cwrt.pivot = new Vector2(0.5f, 1f);
+            cwrt.anchoredPosition = new Vector2(0, -260);
+            cwrt.sizeDelta = new Vector2(320, 130);
+
+            var comboVisual = BuildStickyNote(comboWrap.transform, "Visual",
+                anchorMin: Vector2.zero, anchorMax: Vector2.one, pivot: new Vector2(0.5f, 0.5f),
+                anchored: Vector2.zero, size: Vector2.zero,
+                rotationDeg: LabNotebookTheme.HudCardRotationLeft);
+
+            var comboLabelGO = NewTMP(comboVisual, "Label", "Combo ×2!",
+                LabNotebookTheme.ComboBadgeSize,
+                anchorMin: new Vector2(0, 1), anchorMax: new Vector2(1, 1), pivot: new Vector2(0.5f, 1),
+                anchored: new Vector2(0, -4), size: new Vector2(0, 70),
+                color: LabNotebookTheme.InkRed, alignment: TextAlignmentOptions.Center);
+            ApplyCaveat(comboLabelGO);
+            comboLabelGO.GetComponent<TMP_Text>().fontStyle = FontStyles.Bold;
+
+            var timerBg = new GameObject("TimerBg",
+                typeof(RectTransform), typeof(Image));
+            timerBg.transform.SetParent(comboVisual, false);
+            var tbgRT = (RectTransform)timerBg.transform;
+            tbgRT.anchorMin = new Vector2(0, 0);
+            tbgRT.anchorMax = new Vector2(1, 0);
+            tbgRT.pivot = new Vector2(0.5f, 0);
+            tbgRT.anchoredPosition = new Vector2(0, 8);
+            tbgRT.sizeDelta = new Vector2(-20, 8);
+            timerBg.GetComponent<Image>().color = new Color(0, 0, 0, 0.15f);
+
+            var timerFillGO = new GameObject("TimerFill",
+                typeof(RectTransform), typeof(Image));
             timerFillGO.transform.SetParent(timerBg.transform, false);
             var tfRT = (RectTransform)timerFillGO.transform;
             tfRT.anchorMin = Vector2.zero;
             tfRT.anchorMax = Vector2.one;
             tfRT.offsetMin = Vector2.zero;
             tfRT.offsetMax = Vector2.zero;
-            var timerFillImage = timerFillGO.GetComponent<Image>();
-            timerFillImage.color = new Color(1f, 0.85f, 0.2f, 1f);
-            timerFillImage.type = Image.Type.Filled;
-            timerFillImage.fillMethod = Image.FillMethod.Horizontal;
-            timerFillImage.fillOrigin = (int)Image.OriginHorizontal.Left;
-            timerFillImage.fillAmount = 1f;
+            var timerFillImg = timerFillGO.GetComponent<Image>();
+            timerFillImg.color = LabNotebookTheme.InkRed;
+            timerFillImg.type = Image.Type.Filled;
+            timerFillImg.fillMethod = Image.FillMethod.Horizontal;
+            timerFillImg.fillOrigin = (int)Image.OriginHorizontal.Left;
+            timerFillImg.fillAmount = 1f;
 
-            var badgeView = comboBadge.AddComponent<ComboBadgeView>();
+            var badgeView = comboWrap.AddComponent<ComboBadgeView>();
             var badgeSO = new SerializedObject(badgeView);
-            SetRef(badgeSO, "label", badgeLabel.GetComponent<TMP_Text>());
-            SetRef(badgeSO, "root", badgeVisual);
-            SetRef(badgeSO, "timerFill", timerFillImage);
+            SetRef(badgeSO, "label", comboLabelGO.GetComponent<TMP_Text>());
+            var comboVisualWrap = comboVisual.transform.parent.gameObject;
+            SetRef(badgeSO, "root", comboVisualWrap);
+            SetRef(badgeSO, "timerFill", timerFillImg);
             badgeSO.ApplyModifiedPropertiesWithoutUndo();
-            badgeVisual.SetActive(false);
+            comboVisualWrap.SetActive(false);
 
-            // LivesRow (top-right, 3 heart images).
-            var livesRow = new GameObject("LivesRow", typeof(RectTransform), typeof(HorizontalLayoutGroup));
-            livesRow.transform.SetParent(canvasGO.transform, false);
-            var lrRT = (RectTransform)livesRow.transform;
-            lrRT.anchorMin = new Vector2(1, 1);
-            lrRT.anchorMax = new Vector2(1, 1);
-            lrRT.pivot = new Vector2(1, 1);
-            lrRT.anchoredPosition = new Vector2(-40, -40);
-            lrRT.sizeDelta = new Vector2(280, 80);
-            var hlg = livesRow.GetComponent<HorizontalLayoutGroup>();
-            hlg.spacing = 12;
-            hlg.childAlignment = TextAnchor.MiddleRight;
-            hlg.childForceExpandWidth = false;
-            hlg.childForceExpandHeight = false;
-            hlg.childControlWidth = false;
-            hlg.childControlHeight = false;
+            // LivesRow — sticky note in top-right with three TMP hearts.
+            var livesCard = BuildStickyNote(canvasGO.transform, "LivesRow",
+                anchorMin: new Vector2(1, 1), anchorMax: new Vector2(1, 1), pivot: new Vector2(1, 1),
+                anchored: new Vector2(-60, -60), size: new Vector2(320, 160),
+                rotationDeg: LabNotebookTheme.HudCardRotationRight);
+
+            var livesLabelGO = NewTMP(livesCard, "Label", "LIVES",
+                LabNotebookTheme.HudLabelSize,
+                anchorMin: new Vector2(0, 1), anchorMax: new Vector2(1, 1), pivot: new Vector2(0.5f, 1),
+                anchored: new Vector2(0, -4), size: new Vector2(0, 30),
+                color: LabNotebookTheme.SubduedInk, alignment: TextAlignmentOptions.Center);
+            ApplyCaveat(livesLabelGO);
+
+            var heartsRow = new GameObject("HeartsRow",
+                typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            heartsRow.transform.SetParent(livesCard, false);
+            var hrt = (RectTransform)heartsRow.transform;
+            hrt.anchorMin = new Vector2(0, 0);
+            hrt.anchorMax = new Vector2(1, 1);
+            hrt.offsetMin = new Vector2(0, 0);
+            hrt.offsetMax = new Vector2(0, -32);
+            var hhlg = heartsRow.GetComponent<HorizontalLayoutGroup>();
+            hhlg.spacing = 4;
+            hhlg.childAlignment = TextAnchor.MiddleCenter;
+            hhlg.childForceExpandWidth = false;
+            hhlg.childForceExpandHeight = false;
+            hhlg.childControlWidth = false;
+            hhlg.childControlHeight = false;
 
             var hearts = new Graphic[3];
             for (int i = 0; i < 3; i++)
             {
-                var heartGO = new GameObject($"Heart_{i + 1}", typeof(RectTransform));
-                heartGO.transform.SetParent(livesRow.transform, false);
+                var heartGO = new GameObject($"Heart_{i + 1}",
+                    typeof(RectTransform));
+                heartGO.transform.SetParent(heartsRow.transform, false);
                 var heartRT = (RectTransform)heartGO.transform;
                 heartRT.sizeDelta = new Vector2(72, 72);
                 var tmp = heartGO.AddComponent<TextMeshProUGUI>();
-                tmp.text = "♥"; // ♥
-                tmp.fontSize = 72f;
+                tmp.text = "♥";
+                tmp.fontSize = LabNotebookTheme.HudHeartSize;
                 tmp.alignment = TextAlignmentOptions.Center;
-                tmp.color = new Color(1f, 0.25f, 0.3f, 1f);
+                tmp.color = LabNotebookTheme.InkRed;
                 tmp.textWrappingMode = TextWrappingModes.NoWrap;
+                ApplyCaveat(heartGO);
                 hearts[i] = tmp;
             }
-            var livesView = livesRow.AddComponent<LivesView>();
+
+            var livesView = livesCard.gameObject.AddComponent<LivesView>();
             var livesSO = new SerializedObject(livesView);
             var heartsArr = livesSO.FindProperty("hearts");
             heartsArr.arraySize = 3;
             for (int i = 0; i < 3; i++)
-            {
                 heartsArr.GetArrayElementAtIndex(i).objectReferenceValue = hearts[i];
-            }
+            livesSO.FindProperty("aliveColor").colorValue = LabNotebookTheme.InkRed;
+            livesSO.FindProperty("lostColor").colorValue =
+                new Color(LabNotebookTheme.SubduedInk.r,
+                          LabNotebookTheme.SubduedInk.g,
+                          LabNotebookTheme.SubduedInk.b, 0.35f);
             livesSO.ApplyModifiedPropertiesWithoutUndo();
 
             // ComboPopupLayer (full-screen anchor for floaters).
@@ -333,8 +381,7 @@ namespace OpenNinja.EditorSetup
             SetRef(psSO, "gameCamera", cam);
             psSO.ApplyModifiedPropertiesWithoutUndo();
 
-            // GameOver wrapper (always active, holds the script).
-            // The dim Panel child is what Awake hides and OnGameOver shows.
+            // GameOver wrapper — always active, holds the script.
             var gameOverHost = new GameObject("GameOver", typeof(RectTransform));
             gameOverHost.transform.SetParent(canvasGO.transform, false);
             var gohRT = (RectTransform)gameOverHost.transform;
@@ -343,44 +390,98 @@ namespace OpenNinja.EditorSetup
             gohRT.offsetMin = Vector2.zero;
             gohRT.offsetMax = Vector2.zero;
 
-            var panel = new GameObject("Panel", typeof(RectTransform), typeof(Image));
-            panel.transform.SetParent(gameOverHost.transform, false);
-            var pnlRT = (RectTransform)panel.transform;
-            pnlRT.anchorMin = Vector2.zero;
-            pnlRT.anchorMax = Vector2.one;
-            pnlRT.offsetMin = Vector2.zero;
-            pnlRT.offsetMax = Vector2.zero;
-            panel.GetComponent<Image>().color = new Color(0, 0, 0, 0.7f);
+            // Dim overlay covering the whole canvas behind the panel.
+            var dim = new GameObject("DimOverlay", typeof(RectTransform), typeof(Image));
+            dim.transform.SetParent(gameOverHost.transform, false);
+            var dimRT = (RectTransform)dim.transform;
+            dimRT.anchorMin = Vector2.zero;
+            dimRT.anchorMax = Vector2.one;
+            dimRT.offsetMin = Vector2.zero;
+            dimRT.offsetMax = Vector2.zero;
+            dim.GetComponent<Image>().color = LabNotebookTheme.GameOverDim;
 
-            var finalScore = NewTMP(panel.transform, "FinalScore", "Score: 0", 96,
+            // The notebook page card (centered, slightly rotated).
+            var panel = BuildStickyNote(gameOverHost.transform, "Panel",
                 anchorMin: new Vector2(0.5f, 0.5f), anchorMax: new Vector2(0.5f, 0.5f),
                 pivot: new Vector2(0.5f, 0.5f),
-                anchored: new Vector2(0, 60), size: new Vector2(800, 160),
-                color: Color.white, alignment: TextAlignmentOptions.Center);
+                anchored: Vector2.zero, size: new Vector2(800, 1100),
+                rotationDeg: -1f);
 
-            var btnGO = new GameObject("RestartButton", typeof(RectTransform), typeof(Image), typeof(Button));
-            btnGO.transform.SetParent(panel.transform, false);
-            var btnRT = (RectTransform)btnGO.transform;
-            btnRT.anchorMin = new Vector2(0.5f, 0.5f);
-            btnRT.anchorMax = new Vector2(0.5f, 0.5f);
-            btnRT.pivot = new Vector2(0.5f, 0.5f);
-            btnRT.anchoredPosition = new Vector2(0, -80);
-            btnRT.sizeDelta = new Vector2(320, 100);
-            btnGO.GetComponent<Image>().color = new Color(0.2f, 0.6f, 0.8f, 1f);
+            // Margin line on the panel.
+            var pageMargin = new GameObject("MarginLine",
+                typeof(RectTransform), typeof(Image));
+            pageMargin.transform.SetParent(panel, false);
+            var pmRT = (RectTransform)pageMargin.transform;
+            pmRT.anchorMin = new Vector2(0, 0);
+            pmRT.anchorMax = new Vector2(0, 1);
+            pmRT.pivot = new Vector2(0, 0.5f);
+            pmRT.anchoredPosition = new Vector2(60, 0);
+            pmRT.sizeDelta = new Vector2(2.5f, 0);
+            pageMargin.GetComponent<Image>().color = LabNotebookTheme.MarginRed;
 
-            var btnLabel = NewTMP(btnGO.transform, "Label", "Restart", 48,
+            // Title.
+            var goTitle = NewTMP(panel, "Title", "Run Complete",
+                LabNotebookTheme.GameOverTitleSize,
+                anchorMin: new Vector2(0, 1), anchorMax: new Vector2(1, 1), pivot: new Vector2(0.5f, 1),
+                anchored: new Vector2(0, -80), size: new Vector2(0, 160),
+                color: LabNotebookTheme.InkDark, alignment: TextAlignmentOptions.Center);
+            ApplyCaveat(goTitle);
+            goTitle.GetComponent<TMP_Text>().fontStyle = FontStyles.Bold;
+
+            // Final score.
+            var finalScoreGO = NewTMP(panel, "FinalScore", "Score: 0",
+                LabNotebookTheme.GameOverScoreSize,
+                anchorMin: new Vector2(0, 1), anchorMax: new Vector2(1, 1), pivot: new Vector2(0.5f, 1),
+                anchored: new Vector2(0, -280), size: new Vector2(0, 100),
+                color: LabNotebookTheme.InkRed, alignment: TextAlignmentOptions.Center);
+            ApplyCaveat(finalScoreGO);
+            finalScoreGO.GetComponent<TMP_Text>().fontStyle = FontStyles.Bold;
+
+            // NEW BEST! stamp (rotated red text with red border Image).
+            var newBestWrap = new GameObject("NewBestFlag", typeof(RectTransform), typeof(Image));
+            newBestWrap.transform.SetParent(panel, false);
+            var nbRT = (RectTransform)newBestWrap.transform;
+            nbRT.anchorMin = new Vector2(0.5f, 1);
+            nbRT.anchorMax = new Vector2(0.5f, 1);
+            nbRT.pivot = new Vector2(0.5f, 1);
+            nbRT.anchoredPosition = new Vector2(0, -400);
+            nbRT.sizeDelta = new Vector2(280, 70);
+            nbRT.localRotation = Quaternion.Euler(0, 0, LabNotebookTheme.StampRotation);
+            newBestWrap.GetComponent<Image>().color = new Color(0, 0, 0, 0);
+            var newBestOutline = newBestWrap.AddComponent<Outline>();
+            newBestOutline.effectColor = LabNotebookTheme.InkRed;
+            newBestOutline.effectDistance = new Vector2(2, -2);
+            var newBestText = NewTMP(newBestWrap.transform, "Text", "NEW BEST!",
+                LabNotebookTheme.NewBestStampSize,
                 anchorMin: Vector2.zero, anchorMax: Vector2.one, pivot: new Vector2(0.5f, 0.5f),
                 anchored: Vector2.zero, size: Vector2.zero,
-                color: Color.white, alignment: TextAlignmentOptions.Center);
+                color: LabNotebookTheme.InkRed, alignment: TextAlignmentOptions.Center);
+            ApplyCaveat(newBestText);
+            newBestText.GetComponent<TMP_Text>().fontStyle = FontStyles.Bold;
 
+            // "next?" divider.
+            var nextDiv = BuildDividerOnPanel(panel, "next?", new Vector2(0, -540));
+
+            // Restart button.
+            var restartBtn = BuildPanelButton(panel, "RestartButton", "Try Again",
+                new Vector2(0, -640), LabNotebookTheme.InkDark);
+
+            // Exit button.
+            var exitBtn = BuildPanelButton(panel, "QuitButton", "Pack Up",
+                new Vector2(0, -780), LabNotebookTheme.InkRed);
+
+            // Attach GameOverView and wire references.
             var goView = gameOverHost.AddComponent<GameOverView>();
             var goSO = new SerializedObject(goView);
-            SetRef(goSO, "panelRoot", panel);
-            SetRef(goSO, "finalScoreLabel", finalScore.GetComponent<TMP_Text>());
-            SetRef(goSO, "restartButton", btnGO.GetComponent<Button>());
+            var panelWrap = panel.transform.parent.gameObject;
+            SetRef(goSO, "panelRoot", panelWrap);
+            SetRef(goSO, "finalScoreLabel", finalScoreGO.GetComponent<TMP_Text>());
+            SetRef(goSO, "restartButton", restartBtn);
+            SetRef(goSO, "quitButton", exitBtn);
+            SetRef(goSO, "newBestFlag", newBestWrap);
             SetRef(goSO, "spawner", spawner);
             goSO.ApplyModifiedPropertiesWithoutUndo();
-            panel.SetActive(false);
+            panelWrap.SetActive(false);
 
             // Wire the slice burst prefab into the unified Cube prefab.
             var cubePrefabAsset = AssetDatabase.LoadAssetAtPath<Cube>("Assets/Prefabs/Cube.prefab");
@@ -429,6 +530,182 @@ namespace OpenNinja.EditorSetup
 
             log.Add($"scene saved to {scenePath}");
             return string.Join(" | ", log);
+        }
+
+        /// <summary>
+        /// Creates a small "sticky note" card: a paper-graph background with an
+        /// offset hard-shadow Image behind, slightly rotated. Returns the inner
+        /// content RectTransform — callers parent their labels into that.
+        /// </summary>
+        private static RectTransform BuildStickyNote(Transform parent, string name,
+            Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot,
+            Vector2 anchored, Vector2 size, float rotationDeg)
+        {
+            var paper = AssetDatabase.LoadAssetAtPath<Sprite>(LabNotebookTheme.GraphPaperSpritePath);
+
+            var wrap = new GameObject(name, typeof(RectTransform));
+            wrap.transform.SetParent(parent, false);
+            var wrt = (RectTransform)wrap.transform;
+            wrt.anchorMin = anchorMin;
+            wrt.anchorMax = anchorMax;
+            wrt.pivot = pivot;
+            wrt.anchoredPosition = anchored;
+            wrt.sizeDelta = size;
+            wrt.localRotation = Quaternion.Euler(0, 0, rotationDeg);
+
+            var shadow = new GameObject("Shadow", typeof(RectTransform), typeof(Image));
+            shadow.transform.SetParent(wrap.transform, false);
+            var srt = (RectTransform)shadow.transform;
+            srt.anchorMin = Vector2.zero;
+            srt.anchorMax = Vector2.one;
+            srt.offsetMin = new Vector2(LabNotebookTheme.ShadowOffsetSmall,
+                                        -LabNotebookTheme.ShadowOffsetSmall);
+            srt.offsetMax = new Vector2(LabNotebookTheme.ShadowOffsetSmall,
+                                        -LabNotebookTheme.ShadowOffsetSmall);
+            shadow.GetComponent<Image>().color = new Color(0, 0, 0, 0.35f);
+
+            var bg = new GameObject("Paper", typeof(RectTransform), typeof(Image));
+            bg.transform.SetParent(wrap.transform, false);
+            var brt = (RectTransform)bg.transform;
+            brt.anchorMin = Vector2.zero;
+            brt.anchorMax = Vector2.one;
+            brt.offsetMin = Vector2.zero;
+            brt.offsetMax = Vector2.zero;
+            var bgImg = bg.GetComponent<Image>();
+            bgImg.sprite = paper;
+            bgImg.color = Color.white;
+            bgImg.type = Image.Type.Tiled;
+
+            var content = new GameObject("Content", typeof(RectTransform));
+            content.transform.SetParent(wrap.transform, false);
+            var crt = (RectTransform)content.transform;
+            crt.anchorMin = Vector2.zero;
+            crt.anchorMax = Vector2.one;
+            crt.offsetMin = new Vector2(12, 8);
+            crt.offsetMax = new Vector2(-12, -8);
+            return crt;
+        }
+
+        private static RectTransform BuildDividerOnPanel(RectTransform parent, string label, Vector2 anchored)
+        {
+            var wrap = new GameObject($"Divider_{label}", typeof(RectTransform));
+            wrap.transform.SetParent(parent, false);
+            var rt = (RectTransform)wrap.transform;
+            rt.anchorMin = new Vector2(0, 1);
+            rt.anchorMax = new Vector2(1, 1);
+            rt.pivot = new Vector2(0.5f, 1);
+            rt.anchoredPosition = anchored;
+            rt.sizeDelta = new Vector2(-40, 50);
+
+            var text = NewTMP(wrap.transform, "Text", label.ToUpperInvariant(),
+                LabNotebookTheme.DividerSize,
+                anchorMin: Vector2.zero, anchorMax: Vector2.one, pivot: new Vector2(0.5f, 0.5f),
+                anchored: new Vector2(0, 4), size: Vector2.zero,
+                color: LabNotebookTheme.SubduedInk, alignment: TextAlignmentOptions.Center);
+            ApplyCaveat(text);
+
+            var underline = new GameObject("Underline", typeof(RectTransform), typeof(Image));
+            underline.transform.SetParent(wrap.transform, false);
+            var urt = (RectTransform)underline.transform;
+            urt.anchorMin = new Vector2(0, 0);
+            urt.anchorMax = new Vector2(1, 0);
+            urt.pivot = new Vector2(0.5f, 0);
+            urt.anchoredPosition = Vector2.zero;
+            urt.sizeDelta = new Vector2(0, 1.5f);
+            underline.GetComponent<Image>().color = new Color(
+                LabNotebookTheme.GridBlue.r, LabNotebookTheme.GridBlue.g,
+                LabNotebookTheme.GridBlue.b, 0.4f);
+
+            return rt;
+        }
+
+        private static Button BuildPanelButton(RectTransform parent, string name, string label,
+            Vector2 anchored, Color outlineColor)
+        {
+            var wrap = new GameObject($"{name}Wrap", typeof(RectTransform));
+            wrap.transform.SetParent(parent, false);
+            var wrt = (RectTransform)wrap.transform;
+            wrt.anchorMin = new Vector2(0.5f, 1);
+            wrt.anchorMax = new Vector2(0.5f, 1);
+            wrt.pivot = new Vector2(0.5f, 1);
+            wrt.anchoredPosition = anchored;
+            wrt.sizeDelta = new Vector2(600, 110);
+            wrt.localRotation = Quaternion.Euler(0, 0, -0.5f);
+
+            var shadow = new GameObject("Shadow", typeof(RectTransform), typeof(Image));
+            shadow.transform.SetParent(wrap.transform, false);
+            var srt = (RectTransform)shadow.transform;
+            srt.anchorMin = Vector2.zero;
+            srt.anchorMax = Vector2.one;
+            srt.offsetMin = new Vector2(LabNotebookTheme.ShadowOffsetSmall,
+                                        -LabNotebookTheme.ShadowOffsetSmall);
+            srt.offsetMax = new Vector2(LabNotebookTheme.ShadowOffsetSmall,
+                                        -LabNotebookTheme.ShadowOffsetSmall);
+            shadow.GetComponent<Image>().color = outlineColor;
+
+            var btnGO = new GameObject(name,
+                typeof(RectTransform), typeof(Image), typeof(Button), typeof(Outline));
+            btnGO.transform.SetParent(wrap.transform, false);
+            var brt = (RectTransform)btnGO.transform;
+            brt.anchorMin = Vector2.zero;
+            brt.anchorMax = Vector2.one;
+            brt.offsetMin = Vector2.zero;
+            brt.offsetMax = Vector2.zero;
+            btnGO.GetComponent<Image>().color = LabNotebookTheme.PaperCream;
+            var outline = btnGO.GetComponent<Outline>();
+            outline.effectColor = outlineColor;
+            outline.effectDistance = new Vector2(2.5f, -2.5f);
+
+            var labelGO = NewTMP(btnGO.transform, "Label", label,
+                LabNotebookTheme.GameOverButtonSize,
+                anchorMin: Vector2.zero, anchorMax: Vector2.one, pivot: new Vector2(0.5f, 0.5f),
+                anchored: Vector2.zero, size: Vector2.zero,
+                color: outlineColor, alignment: TextAlignmentOptions.Center);
+            ApplyCaveat(labelGO);
+            labelGO.GetComponent<TMP_Text>().fontStyle = FontStyles.Bold;
+
+            return btnGO.GetComponent<Button>();
+        }
+
+        private static void RebuildComboPopupPrefab()
+        {
+            const string path = "Assets/Prefabs/ComboPopup.prefab";
+            var caveat = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(LabNotebookTheme.FontAssetPath);
+            if (AssetDatabase.LoadMainAssetAtPath(path) != null)
+                AssetDatabase.DeleteAsset(path);
+
+            var root = new GameObject("ComboPopup", typeof(RectTransform));
+            var rt = (RectTransform)root.transform;
+            rt.sizeDelta = new Vector2(300, 100);
+
+            var tmp = root.AddComponent<TextMeshProUGUI>();
+            tmp.text = "+1";
+            if (caveat != null) tmp.font = caveat;
+            tmp.fontSize = LabNotebookTheme.ComboPopupSize;
+            tmp.alignment = TextAlignmentOptions.Center;
+            tmp.color = LabNotebookTheme.InkRed;
+            tmp.fontStyle = FontStyles.Bold;
+
+            var popup = root.AddComponent<ComboPopup>();
+            var so = new SerializedObject(popup);
+            so.FindProperty("label").objectReferenceValue = tmp;
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+        }
+
+        private static TMP_FontAsset _cachedCaveat;
+        private static TMP_FontAsset LoadCaveat()
+        {
+            if (_cachedCaveat == null)
+                _cachedCaveat = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(LabNotebookTheme.FontAssetPath);
+            return _cachedCaveat;
+        }
+        private static void ApplyCaveat(GameObject tmpGO)
+        {
+            var tmp = tmpGO.GetComponent<TMP_Text>();
+            if (tmp != null && LoadCaveat() != null) tmp.font = LoadCaveat();
         }
 
         private static Material CreateProceduralSky()
