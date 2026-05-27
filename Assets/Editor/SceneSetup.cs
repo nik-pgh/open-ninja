@@ -208,6 +208,16 @@ namespace OpenNinja.EditorSetup
             SetRef(scoreSO, "label", scoreGO.GetComponent<TMP_Text>());
             scoreSO.ApplyModifiedPropertiesWithoutUndo();
 
+            // NicknameHud (label under the score; reads PlayerSession.Nickname).
+            var nickGO = NewTMP(canvasGO.transform, "NicknameHud", "Player:", 36,
+                anchorMin: new Vector2(0, 1), anchorMax: new Vector2(0, 1), pivot: new Vector2(0, 1),
+                anchored: new Vector2(40, -120), size: new Vector2(700, 60),
+                color: new Color(1f, 1f, 1f, 0.7f), alignment: TextAlignmentOptions.TopLeft);
+            var nickHud = nickGO.AddComponent<NicknameHud>();
+            var nickSO = new SerializedObject(nickHud);
+            SetRef(nickSO, "label", nickGO.GetComponent<TMP_Text>());
+            nickSO.ApplyModifiedPropertiesWithoutUndo();
+
             // ComboBadge wrapper (always active, holds the script).
             // Visual child is what gets toggled when the multiplier is 1.
             var comboBadge = new GameObject("ComboBadge", typeof(RectTransform));

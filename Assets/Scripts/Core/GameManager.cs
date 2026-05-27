@@ -144,6 +144,7 @@ namespace OpenNinja
         {
             IsGameOver = true;
             Time.timeScale = 0f;
+            PlayerSession.TrySetBestScore(Score);
             OnGameOver?.Invoke(Score);
         }
 
