@@ -32,10 +32,13 @@ namespace OpenNinja.EditorSetup
             log.Add("skybox + ambient set");
 
             // ---- Camera ----
+            // Portrait mobile (9:16): wider FOV + lower pitch so the narrow viewport
+            // still captures enough horizontal play area without lopping cubes off
+            // the bottom of the screen.
             var cam = Camera.main;
-            cam.transform.position = new Vector3(0f, 4f, -12f);
-            cam.transform.rotation = Quaternion.Euler(20f, 0f, 0f);
-            cam.fieldOfView = 60f;
+            cam.transform.position = new Vector3(0f, 2f, -12f);
+            cam.transform.rotation = Quaternion.Euler(10f, 0f, 0f);
+            cam.fieldOfView = 75f;
             cam.clearFlags = CameraClearFlags.Skybox;
             cam.backgroundColor = new Color(0.06f, 0.06f, 0.12f, 1f);
             log.Add("camera positioned");
@@ -54,9 +57,9 @@ namespace OpenNinja.EditorSetup
 
             // ---- KillZone ----
             var killZone = new GameObject("KillZone");
-            killZone.transform.position = new Vector3(0f, -8f, 0f);
+            killZone.transform.position = new Vector3(0f, -10f, 0f);
             var killCol = killZone.AddComponent<BoxCollider>();
-            killCol.size = new Vector3(40f, 2f, 4f);
+            killCol.size = new Vector3(20f, 2f, 4f);
             killCol.isTrigger = true;
             killZone.AddComponent<KillZone>();
             log.Add("killzone created");
@@ -69,15 +72,16 @@ namespace OpenNinja.EditorSetup
             walls.transform.SetParent(systems.transform, false);
 
             var pm = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>("Assets/Data/BouncyWall.physicMaterial");
-            BuildWall(walls.transform, "Wall_Left",  position: new Vector3(-10f, 0f, 0f),
+            // Portrait playfield: ~10 wide, ~20 tall. Side walls at ±5; top at +9.
+            BuildWall(walls.transform, "Wall_Left",  position: new Vector3(-5f, 0f, 0f),
                 rotation: Quaternion.identity,
-                fullSize: new Vector3(1f, 20f, 4f),  segmentCount: 12, pm: pm);
-            BuildWall(walls.transform, "Wall_Right", position: new Vector3(10f, 0f, 0f),
+                fullSize: new Vector3(1f, 22f, 4f),  segmentCount: 12, pm: pm);
+            BuildWall(walls.transform, "Wall_Right", position: new Vector3(5f, 0f, 0f),
                 rotation: Quaternion.identity,
-                fullSize: new Vector3(1f, 20f, 4f),  segmentCount: 12, pm: pm);
-            BuildWall(walls.transform, "Wall_Top",   position: new Vector3(0f, 8f, 0f),
+                fullSize: new Vector3(1f, 22f, 4f),  segmentCount: 12, pm: pm);
+            BuildWall(walls.transform, "Wall_Top",   position: new Vector3(0f, 9f, 0f),
                 rotation: Quaternion.identity,
-                fullSize: new Vector3(20f, 1f, 4f),  segmentCount: 12, pm: pm);
+                fullSize: new Vector3(12f, 1f, 4f),  segmentCount: 12, pm: pm);
 
             log.Add("walls built");
 
@@ -86,7 +90,7 @@ namespace OpenNinja.EditorSetup
             probeGO.transform.SetParent(systems.transform, false);
             probeGO.transform.position = Vector3.zero;
             var probe = probeGO.AddComponent<ReflectionProbe>();
-            probe.size = new Vector3(25f, 20f, 10f);
+            probe.size = new Vector3(14f, 22f, 10f);
             probe.mode = UnityEngine.Rendering.ReflectionProbeMode.Baked;
             probe.resolution = 128;
             probe.importance = 1;
@@ -104,11 +108,11 @@ namespace OpenNinja.EditorSetup
 
             var spawnLeft = new GameObject("SpawnLeft");
             spawnLeft.transform.SetParent(spawnerGO.transform, false);
-            spawnLeft.transform.position = new Vector3(-7f, -6f, 0f);
+            spawnLeft.transform.position = new Vector3(-3.5f, -8f, 0f);
 
             var spawnRight = new GameObject("SpawnRight");
             spawnRight.transform.SetParent(spawnerGO.transform, false);
-            spawnRight.transform.position = new Vector3(7f, -6f, 0f);
+            spawnRight.transform.position = new Vector3(3.5f, -8f, 0f);
 
             var cubePrefab = AssetDatabase.LoadAssetAtPath<Cube>("Assets/Prefabs/Cube.prefab");
 
