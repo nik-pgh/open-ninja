@@ -158,7 +158,66 @@ namespace OpenNinja.EditorSetup
 
         private static void GenerateCrystal(string name)
         {
-            SaveStubPair(name, new Color(0.55f, 0.85f, 1f, 1f));
+            Random.InitState("Crystal".GetHashCode());
+            Color baseTint = new Color(0.55f, 0.85f, 1f, 1f);
+            const int CellCount = 24;
+
+            var (centers, cellMap, _) = VoronoiCells(CellCount, TexSize, seed: "Crystal".GetHashCode());
+
+            // Per-cell color jitter so each facet feels slightly distinct.
+            var cellTints = new Color[CellCount];
+            var rng = new System.Random("Crystal".GetHashCode());
+            for (int i = 0; i < CellCount; i++)
+            {
+                float dr = (float)(rng.NextDouble() * 0.1 - 0.05);
+                float dg = (float)(rng.NextDouble() * 0.1 - 0.05);
+                float db = (float)(rng.NextDouble() * 0.1 - 0.05);
+                cellTints[i] = new Color(
+                    Mathf.Clamp01(baseTint.r + dr),
+                    Mathf.Clamp01(baseTint.g + dg),
+                    Mathf.Clamp01(baseTint.b + db),
+                    1f);
+            }
+
+            // For each pixel: find the cell, find distance to the nearest cell BOUNDARY (vs. center).
+            var height = new float[TexSize * TexSize];
+            var albedo = new Color[TexSize * TexSize];
+
+            for (int y = 0; y < TexSize; y++)
+            {
+                for (int x = 0; x < TexSize; x++)
+                {
+                    int cellIdx = cellMap[y * TexSize + x];
+
+                    // Distance to nearest center − distance to nearest non-self center.
+                    float dSelf = Vector2.Distance(new Vector2(x, y), centers[cellIdx]);
+                    float dOther = float.MaxValue;
+                    for (int i = 0; i < CellCount; i++)
+                    {
+                        if (i == cellIdx) continue;
+                        float d = Vector2.Distance(new Vector2(x, y), centers[i]);
+                        if (d < dOther) dOther = d;
+                    }
+                    // Edge proximity: 0 at boundary, increases toward cell center.
+                    float edgeDist = dOther - dSelf;
+                    float edgeShade = Mathf.Clamp01(edgeDist / 12f);
+
+                    // Center is slightly brighter, edges darker.
+                    Color tone = cellTints[cellIdx] * Mathf.Lerp(0.85f, 1.1f, edgeShade);
+                    tone.r = Mathf.Clamp01(tone.r);
+                    tone.g = Mathf.Clamp01(tone.g);
+                    tone.b = Mathf.Clamp01(tone.b);
+                    tone.a = 1f;
+
+                    albedo[y * TexSize + x] = tone;
+                    // Height encodes edge sharpness — high in centers, drops sharply at edges.
+                    height[y * TexSize + x] = Mathf.Pow(edgeShade, 0.5f);
+                }
+            }
+
+            SaveTexture(albedo, $"{OutputDir}/{name}_Albedo.png", isNormalMap: false);
+            var normalPixels = HeightToNormal(height, TexSize, strength: 10f);
+            SaveTexture(normalPixels, $"{OutputDir}/{name}_Normal.png", isNormalMap: true);
         }
 
         private static void GenerateSpiked(string name)
