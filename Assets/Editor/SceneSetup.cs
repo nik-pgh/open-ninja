@@ -51,6 +51,12 @@ namespace OpenNinja.EditorSetup
             cam.fieldOfView = 75f;
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = LabNotebookTheme.WhiteboardWall;
+            // BiRP renders to a linear HDR buffer when allowHDR is on. The
+            // conversion back to sRGB display visibly dims near-white values
+            // (the whiteboard wall reads ~30% darker than the canvas
+            // sticky-notes that bypass the camera entirely). LDR backbuffer
+            // path keeps the wall and the UI at the same perceived brightness.
+            cam.allowHDR = false;
             log.Add("camera positioned");
 
             // ---- Tune the directional light ----
