@@ -12,8 +12,10 @@ namespace OpenNinja
         [SerializeField] private ComboPopup popupPrefab;
         [SerializeField] private RectTransform layer;
         [SerializeField] private Camera gameCamera;
-        [SerializeField] private Color positiveColor = new Color(1f, 0.95f, 0.4f);
-        [SerializeField] private Color negativeColor = new Color(1f, 0.3f, 0.3f);
+        // InkAmber (0.78, 0.62, 0.23) — dark enough to read on the cream
+        // backdrop. The original pale yellow blended in.
+        [SerializeField] private Color positiveColor = new Color(0.784f, 0.616f, 0.227f);
+        [SerializeField] private Color negativeColor = new Color(0.78f, 0.20f, 0.20f);
 
         private void Awake()
         {

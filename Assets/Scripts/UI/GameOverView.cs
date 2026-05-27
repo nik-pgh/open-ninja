@@ -7,7 +7,9 @@ namespace OpenNinja
     public class GameOverView : MonoBehaviour
     {
         [SerializeField] private GameObject panelRoot;
+        [SerializeField] private GameObject dimOverlay;
         [SerializeField] private TMP_Text finalScoreLabel;
+        [SerializeField] private TMP_Text bestScoreLabel;
         [SerializeField] private Button restartButton;
         [SerializeField] private Button quitButton;
         [SerializeField] private GameObject newBestFlag;
@@ -18,6 +20,7 @@ namespace OpenNinja
         private void Awake()
         {
             if (panelRoot != null) panelRoot.SetActive(false);
+            if (dimOverlay != null) dimOverlay.SetActive(false);
             if (newBestFlag != null) newBestFlag.SetActive(false);
             _bestAtSceneStart = PlayerSession.BestScore;
         }
@@ -39,13 +42,18 @@ namespace OpenNinja
         private void Show(int finalScore)
         {
             if (panelRoot != null) panelRoot.SetActive(true);
+            if (dimOverlay != null) dimOverlay.SetActive(true);
             if (finalScoreLabel != null) finalScoreLabel.text = $"Score: {finalScore}";
+            // PlayerSession.BestScore is already up-to-date here since
+            // GameManager.SetGameOver wrote it before firing OnGameOver.
+            if (bestScoreLabel != null) bestScoreLabel.text = $"Best: {PlayerSession.BestScore}";
             if (newBestFlag != null) newBestFlag.SetActive(finalScore > _bestAtSceneStart);
         }
 
         private void OnRestartClicked()
         {
             if (panelRoot != null) panelRoot.SetActive(false);
+            if (dimOverlay != null) dimOverlay.SetActive(false);
             if (newBestFlag != null) newBestFlag.SetActive(false);
             GameManager.Instance?.ResetGame();
             spawner?.NotifyRunRestarted();

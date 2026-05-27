@@ -21,6 +21,6 @@ MonoBehaviour:
   launchImpulseOverride: {x: 6, y: 12}
   renderMaterial: {fileID: 2100000, guid: 5dd375a19ec58435eb40148484f7e74c, type: 2}
   burstTint: {r: 0.65, g: 0.45, b: 0.25, a: 1}
-  impactClip: {fileID: 0}
+  impactClip: {fileID: 8300000, guid: cf9517109d5f448b8a09d849a731256c, type: 3}
   audioPitchAtMassOne: 1
   audioVolume: 0.7

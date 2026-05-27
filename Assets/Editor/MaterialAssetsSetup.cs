@@ -33,12 +33,14 @@ namespace OpenNinja.EditorSetup
             DeleteIfExists("Assets/Materials/Cube_Red.mat");
             DeleteIfExists("Assets/Materials/Cube_Black.mat");
 
-            // 2) Render materials.
+            // 2) Render materials. Tints are intentionally close to white where the
+            // procedural albedo already carries the color (Metal/Stone/Spiked were
+            // previously crushed by dark tints, making them read as similar gray boxes).
             var woodMat    = MakeMaterial("Wood",    new Color(0.55f, 0.35f, 0.2f, 1f), smoothness: 0.35f, metallic: 0.0f, bumpScale: 1.0f);
-            var stoneMat   = MakeMaterial("Stone",   new Color(0.55f, 0.55f, 0.55f, 1f), smoothness: 0.25f, metallic: 0.0f, bumpScale: 0.8f);
-            var metalMat   = MakeMaterial("Metal",   new Color(0.25f, 0.25f, 0.27f, 1f), smoothness: 0.85f, metallic: 1.0f, bumpScale: 0.3f);
+            var stoneMat   = MakeMaterial("Stone",   new Color(1.00f, 0.95f, 0.85f, 1f), smoothness: 0.25f, metallic: 0.0f, bumpScale: 0.9f);
+            var metalMat   = MakeMaterial("Metal",   new Color(0.85f, 0.90f, 1.00f, 1f), smoothness: 0.85f, metallic: 1.0f, bumpScale: 0.8f);
             var crystalMat = MakeMaterial("Crystal", new Color(0.55f, 0.85f, 1f, 1f), smoothness: 0.95f, metallic: 0.1f, bumpScale: 0.8f);
-            var spikedMat  = MakeMaterial("Spiked",  new Color(0.1f, 0.1f, 0.1f, 1f), smoothness: 0.4f, metallic: 0.0f, bumpScale: 1.0f);
+            var spikedMat  = MakeMaterial("Spiked",  new Color(1.00f, 1.00f, 1.00f, 1f), smoothness: 0.55f, metallic: 0.3f, bumpScale: 1.6f);
             var rubberMat  = MakeMaterial("Rubber",  new Color(1f, 0.9f, 0.2f, 1f), smoothness: 0.3f, metallic: 0.0f, bumpScale: 0.4f);
 
             // 3) BouncyWall physic material.

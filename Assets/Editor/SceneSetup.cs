@@ -489,11 +489,14 @@ namespace OpenNinja.EditorSetup
             var exitBtn = BuildPanelButton(panel, "QuitButton", "Pack Up",
                 new Vector2(0, -780), LabNotebookTheme.InkRed);
 
-            // Attach GameOverView and wire references.
+            // Attach GameOverView and wire references. panelRoot toggles the
+            // sticky-note panel; dimOverlay toggles the 55% black layer
+            // separately so the DimOverlay isn't visible during normal play.
             var goView = gameOverHost.AddComponent<GameOverView>();
             var goSO = new SerializedObject(goView);
             var panelWrap = panel.transform.parent.gameObject;
             SetRef(goSO, "panelRoot", panelWrap);
+            SetRef(goSO, "dimOverlay", dim);
             SetRef(goSO, "finalScoreLabel", finalScoreGO.GetComponent<TMP_Text>());
             SetRef(goSO, "restartButton", restartBtn);
             SetRef(goSO, "quitButton", exitBtn);
@@ -501,6 +504,7 @@ namespace OpenNinja.EditorSetup
             SetRef(goSO, "spawner", spawner);
             goSO.ApplyModifiedPropertiesWithoutUndo();
             panelWrap.SetActive(false);
+            dim.SetActive(false);
 
             // Wire the slice burst prefab into the unified Cube prefab.
             var cubePrefabAsset = AssetDatabase.LoadAssetAtPath<Cube>("Assets/Prefabs/Cube.prefab");

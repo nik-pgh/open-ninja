@@ -67,10 +67,11 @@ namespace OpenNinja
                 else                                  gm.RegisterHit(material.basePoints, slicePoint);
             }
 
-            // Sense-of-mass feedback. Both helpers no-op when the runtime
-            // pieces (singletons, scene) aren't present (e.g. in unit tests).
+            // Sense-of-mass feedback. Helpers no-op when the runtime pieces
+            // (singletons, scene) aren't present (e.g. in unit tests).
             if (material != null)
             {
+                AudioManager.Instance?.PlaySlice(slicePoint, material.role, material.mass);
                 HitStopController.Apply(material.mass);
                 BladeController.Instance?.ApplySliceDrag(material.mass);
             }

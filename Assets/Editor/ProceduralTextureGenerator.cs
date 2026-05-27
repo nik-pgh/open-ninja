@@ -81,8 +81,10 @@ namespace OpenNinja.EditorSetup
         private static void GenerateStone(string name)
         {
             Random.InitState("Stone".GetHashCode());
-            Color baseColor = new Color(0.55f, 0.55f, 0.55f, 1f);
-            Color micaColor = new Color(0.18f, 0.18f, 0.22f, 1f);
+            // Warm sandstone gray — sits opposite Metal's cool steel-blue so the
+            // two materials are clearly different at a glance.
+            Color baseColor = new Color(0.68f, 0.62f, 0.52f, 1f);
+            Color micaColor = new Color(0.30f, 0.22f, 0.18f, 1f);
 
             float xOffset = Random.value * 100f;
             float yOffset = Random.value * 100f;
@@ -128,31 +130,43 @@ namespace OpenNinja.EditorSetup
         private static void GenerateMetal(string name)
         {
             Random.InitState("Metal".GetHashCode());
-            Color baseColor = new Color(0.3f, 0.3f, 0.32f, 1f);
+            // Steel-blue brushed look — distinctly cooler and brighter than Stone's
+            // warm gray, so the two materials read as different alloys at a glance.
+            Color baseColor   = new Color(0.62f, 0.68f, 0.78f, 1f);
+            Color highlight   = new Color(0.92f, 0.94f, 1.00f, 1f);
+            Color shadowTint  = new Color(0.30f, 0.36f, 0.45f, 1f);
 
             var height = new float[TexSize * TexSize];
             var albedo = new Color[TexSize * TexSize];
 
             for (int y = 0; y < TexSize; y++)
             {
-                // Per-row sinusoidal line.
-                float line = (Mathf.Sin(y * 1.2f) * 0.5f + 0.5f) * 0.06f;
+                // Brushed-steel band: bright horizontal ridge that varies row-to-row.
+                float band = Mathf.Sin(y * 0.35f) * 0.5f + 0.5f;
+                float ridge = Mathf.SmoothStep(0.45f, 0.55f, band); // sharper ridge
 
                 for (int x = 0; x < TexSize; x++)
                 {
-                    // Tiny per-row scratch using horizontal-favoring Perlin.
-                    float scratches = Mathf.PerlinNoise(x * 0.01f, y * 0.3f) * 0.04f;
-                    float darkness = line + scratches;
+                    // Long horizontal scratches: high-frequency noise stretched in x.
+                    float scratch = Mathf.PerlinNoise(x * 0.015f, y * 0.6f) - 0.5f;
+                    // Tiny per-pixel jitter so it doesn't band visibly.
+                    float jitter = (Mathf.PerlinNoise(x * 0.9f, y * 0.9f) - 0.5f) * 0.08f;
 
-                    Color tone = baseColor * (1f - darkness);
+                    float lightness = ridge * 0.45f + scratch * 0.25f + jitter;
+
+                    Color tone;
+                    if (lightness >= 0f)
+                        tone = Color.Lerp(baseColor, highlight, Mathf.Clamp01(lightness));
+                    else
+                        tone = Color.Lerp(baseColor, shadowTint, Mathf.Clamp01(-lightness));
                     tone.a = 1f;
                     albedo[y * TexSize + x] = tone;
-                    height[y * TexSize + x] = darkness;
+                    height[y * TexSize + x] = lightness * 0.5f + 0.5f;
                 }
             }
 
             SaveTexture(albedo, $"{OutputDir}/{name}_Albedo.png", isNormalMap: false);
-            var normalPixels = HeightToNormal(height, TexSize, strength: 2f);
+            var normalPixels = HeightToNormal(height, TexSize, strength: 4f);
             SaveTexture(normalPixels, $"{OutputDir}/{name}_Normal.png", isNormalMap: true);
         }
 
@@ -223,11 +237,21 @@ namespace OpenNinja.EditorSetup
         private static void GenerateSpiked(string name)
         {
             Random.InitState("Spiked".GetHashCode());
-            Color baseColor = new Color(0.1f, 0.1f, 0.1f, 1f);
-            Color peakColor = new Color(0.35f, 0.1f, 0.35f, 1f);
-            const int CellCount = 36;
+            // Dark backplate, steel-bright pyramid tips, with a danger-red wash
+            // around each pyramid base so the cube reads as menacing on sight.
+            Color plateColor  = new Color(0.20f, 0.18f, 0.22f, 1f);
+            Color baseColor   = new Color(0.45f, 0.10f, 0.10f, 1f); // ring around each spike
+            Color midColor    = new Color(0.65f, 0.62f, 0.65f, 1f);
+            Color peakColor   = new Color(1.00f, 0.97f, 0.92f, 1f);
 
-            var (centers, cellMap, _) = VoronoiCells(CellCount, TexSize, seed: "Spiked".GetHashCode());
+            // 4 large iconic pyramids per face — a grid layout reads as
+            // intentional studs rather than a noisy random-dot pattern.
+            const int Cols = 4;
+            const int Rows = 4;
+            float cellW = TexSize / (float)Cols;
+            float cellH = TexSize / (float)Rows;
+            // Pyramid base ~ 90% of cell size; tip is sharp.
+            float baseRadius = Mathf.Min(cellW, cellH) * 0.45f;
 
             var height = new float[TexSize * TexSize];
             var albedo = new Color[TexSize * TexSize];
@@ -236,32 +260,43 @@ namespace OpenNinja.EditorSetup
             {
                 for (int x = 0; x < TexSize; x++)
                 {
-                    int cellIdx = cellMap[y * TexSize + x];
-                    float dSelf = Vector2.Distance(new Vector2(x, y), centers[cellIdx]);
+                    // Nearest pyramid center for this pixel.
+                    float gx = (Mathf.Floor(x / cellW) + 0.5f) * cellW;
+                    float gy = (Mathf.Floor(y / cellH) + 0.5f) * cellH;
+                    float d = Vector2.Distance(new Vector2(x, y), new Vector2(gx, gy));
 
-                    // Estimated cell radius — distance to nearest other center / 2.
-                    float dOther = float.MaxValue;
-                    for (int i = 0; i < CellCount; i++)
+                    // 0 outside pyramid base, 1 at tip.
+                    float t = Mathf.Clamp01(1f - d / baseRadius);
+                    // Sharp cone — pushes most of the gradient into the central spike.
+                    float coneT = Mathf.Pow(t, 3f);
+
+                    Color tone;
+                    if (t <= 0f)
                     {
-                        if (i == cellIdx) continue;
-                        float d = Vector2.Distance(centers[cellIdx], centers[i]);
-                        if (d < dOther) dOther = d;
+                        tone = plateColor;
                     }
-                    float radius = dOther * 0.5f;
-                    float t = Mathf.Clamp01(1f - dSelf / radius); // 1 at center, 0 at edge
-
-                    // Pyramid shading: center is lit, edges are dark.
-                    Color tone = Color.Lerp(baseColor, peakColor, t * 0.7f);
+                    else if (t < 0.25f)
+                    {
+                        // Red ring near the base (close to plate edge).
+                        tone = Color.Lerp(plateColor, baseColor, t / 0.25f);
+                    }
+                    else if (coneT < 0.55f)
+                    {
+                        tone = Color.Lerp(baseColor, midColor, (coneT - 0f) / 0.55f);
+                    }
+                    else
+                    {
+                        tone = Color.Lerp(midColor, peakColor, (coneT - 0.55f) / 0.45f);
+                    }
                     tone.a = 1f;
                     albedo[y * TexSize + x] = tone;
-
-                    // Height = pyramid peak; full strength at center, 0 at edge.
-                    height[y * TexSize + x] = t;
+                    height[y * TexSize + x] = coneT;
                 }
             }
 
             SaveTexture(albedo, $"{OutputDir}/{name}_Albedo.png", isNormalMap: false);
-            var normalPixels = HeightToNormal(height, TexSize, strength: 8f);
+            // Strong normal so the pyramid tips catch lighting and read as 3D.
+            var normalPixels = HeightToNormal(height, TexSize, strength: 22f);
             SaveTexture(normalPixels, $"{OutputDir}/{name}_Normal.png", isNormalMap: true);
         }
 

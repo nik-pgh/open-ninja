@@ -26,8 +26,13 @@ namespace OpenNinja.EditorSetup
             tmp.text = "+1";
             tmp.fontSize = 48f;
             tmp.alignment = TextAlignmentOptions.Center;
-            tmp.color = new Color(1f, 0.95f, 0.4f, 1f);
+            // Notebook ink amber — distinctly readable on the cream backdrop.
+            // The previous near-pure-yellow disappeared against the paper.
+            tmp.color = LabNotebookTheme.InkAmber;
             tmp.fontStyle = FontStyles.Bold;
+            // Dark outline so the text stays legible if a cube ever lands behind it.
+            tmp.outlineColor = LabNotebookTheme.InkDark;
+            tmp.outlineWidth = 0.2f;
 
             var popup = root.AddComponent<OpenNinja.ComboPopup>();
 

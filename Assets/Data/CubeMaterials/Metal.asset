@@ -18,9 +18,9 @@ MonoBehaviour:
   mass: 3
   displayScale: 2
   bouncinessMultiplier: 0.9
-  launchImpulseOverride: {x: 10, y: 14}
+  launchImpulseOverride: {x: 15, y: 20}
   renderMaterial: {fileID: 2100000, guid: cf9620e02ff3146a7b6fff8f86a0e47a, type: 2}
   burstTint: {r: 0.5, g: 0.55, b: 0.6, a: 1}
-  impactClip: {fileID: 0}
-  audioPitchAtMassOne: 1
+  impactClip: {fileID: 8300000, guid: bd32a7ba33db54fbeb2fc430bd37609c, type: 3}
+  audioPitchAtMassOne: 1.05
   audioVolume: 0.7

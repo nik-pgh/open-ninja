@@ -171,14 +171,26 @@ namespace OpenNinja.EditorSetup
 
             var pixels = new Color[GraphSize * GraphSize];
             Color paper = LabNotebookTheme.PaperCream;
-            Color grid  = LabNotebookTheme.GridBlue;
+            // 30% alpha keeps the rule visible but subdued — feels like real
+            // notebook ink, not a solid bar.
+            Color rule  = new Color(
+                LabNotebookTheme.GridBlue.r,
+                LabNotebookTheme.GridBlue.g,
+                LabNotebookTheme.GridBlue.b,
+                0.30f);
+            // Notebook-ruled paper: horizontal rules only. Background is rendered
+            // Image.Type.Simple at 1080x1920 canvas, so each source pixel becomes
+            // ~3.75 canvas units. A 1-px source rule = ~3.75 canvas units thick,
+            // matching the 2.5-unit red margin in perceived weight. 12-px spacing
+            // = ~45 canvas units apart, classic notebook density.
+            const int RuleSpacing   = 12;
+            const int RuleThickness = 1;
             for (int y = 0; y < GraphSize; y++)
             {
+                bool isRule = (y % RuleSpacing) < RuleThickness;
+                Color row = isRule ? Blend(paper, rule) : paper;
                 for (int x = 0; x < GraphSize; x++)
-                {
-                    bool isGridLine = (x % GraphStep == 0) || (y % GraphStep == 0);
-                    pixels[y * GraphSize + x] = isGridLine ? Blend(paper, grid) : paper;
-                }
+                    pixels[y * GraphSize + x] = row;
             }
 
             var tex = new Texture2D(GraphSize, GraphSize, TextureFormat.RGBA32, mipChain: false);
@@ -191,12 +203,23 @@ namespace OpenNinja.EditorSetup
             var importer = (TextureImporter)AssetImporter.GetAtPath(LabNotebookTheme.GraphPaperSpritePath);
             if (importer != null)
             {
-                importer.textureType   = TextureImporterType.Sprite;
+                importer.textureType    = TextureImporterType.Sprite;
+                // Single-sprite mode so the asset is loadable via
+                // AssetDatabase.LoadAssetAtPath<Sprite>(). Multiple mode (the
+                // editor default for some Unity versions) needs an explicit
+                // sprite rect table and otherwise yields no usable sprite.
+                importer.spriteImportMode = SpriteImportMode.Single;
                 importer.wrapMode      = TextureWrapMode.Repeat;
-                importer.filterMode    = FilterMode.Point;
+                // Bilinear so a 2-px rule scaled to a fractional screen-pixel
+                // still renders as a faded line instead of disappearing entirely.
+                importer.filterMode    = FilterMode.Bilinear;
                 importer.maxTextureSize = GraphSize;
                 importer.mipmapEnabled = false;
                 importer.npotScale     = TextureImporterNPOTScale.None;
+                // PPU = 4 → each 512-tile spans 128 canvas units (a 1080x1920 canvas
+                // fits ~8 tiles wide and ~15 tall), so rule lines are ~4 canvas-units
+                // thick on screen instead of subpixel thin.
+                importer.spritePixelsPerUnit = 4f;
                 importer.SaveAndReimport();
             }
             return "png: generated";
