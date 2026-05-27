@@ -18,6 +18,21 @@ namespace OpenNinja.EditorSetup
         private const int Width = 1080;
         private const int Height = 1920;
 
+        /// <summary>
+        /// Runs every time the Editor reloads (project open, after script
+        /// recompile). Keeps the Game View pinned to portrait without manual
+        /// reapplication. EditorApplication.delayCall defers one frame so the
+        /// internal GameViewSizes singleton has time to initialize.
+        /// </summary>
+        [InitializeOnLoadMethod]
+        private static void AutoApplyOnLoad()
+        {
+            EditorApplication.delayCall += () =>
+            {
+                try { Apply(); } catch { /* Game View may not be open yet; ignored. */ }
+            };
+        }
+
         public static string Apply()
         {
             var (group, idx) = EnsureSize();
