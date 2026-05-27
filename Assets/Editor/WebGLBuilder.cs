@@ -92,10 +92,12 @@ namespace OpenNinja.EditorBuild
             string webSrc = "web";
             if (Directory.Exists(webSrc))
             {
-                // 1) Replace Unity's default index.html with our custom one.
+                // 1) Replace Unity's default index.html with our custom one;
+                //    bring along the OG image so social link previews work.
                 CopyOver(Path.Combine(webSrc, "index.html"),    Path.Combine(OutputDir, "index.html"));
                 CopyOver(Path.Combine(webSrc, "vercel.json"),   Path.Combine(OutputDir, "vercel.json"));
                 CopyOver(Path.Combine(webSrc, ".vercelignore"), Path.Combine(OutputDir, ".vercelignore"));
+                CopyOver(Path.Combine(webSrc, "og.png"),        Path.Combine(OutputDir, "og.png"));
 
                 // 2) Drop Unity's TemplateData/ (logo, default favicon, etc).
                 string templateData = Path.Combine(OutputDir, "TemplateData");
