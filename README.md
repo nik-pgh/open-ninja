@@ -1,7 +1,7 @@
 <h1 align="center">Material Ninja</h1>
 
 <p align="center">
-  <a href="https://material-ninja.vercel.app"><img src="docs/banner.png" alt="Material Ninja — lab notebook logo" width="720"></a>
+  <a href="https://material-ninja.vercel.app"><img src="docs/banner.png" alt="Material Ninja — lab notebook logo"></a>
 </p>
 
 <p align="center">
