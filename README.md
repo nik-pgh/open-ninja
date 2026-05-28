@@ -1,4 +1,4 @@
-<h1 align="center">Material Ninja</h1>
+<h1>Material Ninja</h1>
 
 <p align="center">
   <a href="https://material-ninja.vercel.app"><img src="docs/banner.png" alt="Material Ninja — lab notebook logo"></a>
@@ -9,7 +9,7 @@
   Watch out for the spiked ones.
 </p>
 
-<p align="center">
+<p>
   <a href="https://material-ninja.vercel.app"><b>▶ play in your browser</b></a>
 </p>
 
