@@ -4,7 +4,7 @@
   <a href="https://material-ninja.vercel.app"><img src="docs/banner.png" alt="Material Ninja — lab notebook logo"></a>
 </p>
 
-<p align="center">
+<p>
   <b>Slice cubes of wood, stone, metal, crystal, and rubber.</b><br>
   Watch out for the spiked ones.
 </p>
